@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - الترتيب الذكي</title>
+    <title>ShareRide - النسخة الاحترافية</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
@@ -19,6 +19,7 @@
         .time-label { font-size: 10px; font-weight: 800; color: #00a884; margin-bottom: 2px; display: block; }
         .btn-green { background: #00a884; color: white; border-radius: 15px; font-weight: bold; width: 100%; padding: 14px; }
         .content-fade { opacity: 0.5; filter: grayscale(0.8); }
+        .admin-edit-box { background: #f0fdf4; border: 2px solid #00a884; padding: 15px; border-radius: 20px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -35,14 +36,14 @@
 
     <main class="max-w-md mx-auto p-4">
 
-        <!-- 1. البحث (مرتب حسب نقطة الانطلاق) -->
+        <!-- 1. البحث -->
         <div id="view-search" class="tab-content active">
             <div class="bg-white p-4 rounded-2xl mb-6 border shadow-sm text-center">
                 <div class="grid grid-cols-2 gap-2 mb-3">
                     <select id="f-o" class="form-input text-xs font-bold"></select>
                     <select id="f-d" class="form-input text-xs font-bold"></select>
                 </div>
-                <button onclick="apiGetTrips()" class="btn-green">تحديث وتجميع المناطق 🔄</button>
+                <button onclick="apiGetTrips()" class="btn-green">تحديث النتائج 🔄</button>
             </div>
             <div id="list-public"></div>
         </div>
@@ -56,14 +57,23 @@
                         <button type="button" id="role-pas" onclick="uiRole('passenger')" class="flex-1 py-2 rounded-lg font-bold text-xs text-gray-500">أنا راكب 🙋‍♂️</button>
                     </div>
                     <input type="hidden" id="in-role" value="captain">
+                    
                     <div class="grid grid-cols-2 gap-3 text-xs font-bold">
-                        <select id="in-o" required class="form-input"></select>
-                        <select id="in-d" required class="form-input"></select>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-1">من منطقة:</label>
+                            <select id="in-o" required class="form-input"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-1">إلى منطقة:</label>
+                            <select id="in-d" required class="form-input"></select>
+                        </div>
                     </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div class="time-box"><label class="time-label italic">موعد الانطلاق 🕒</label><input type="time" id="in-t1" required class="w-full bg-transparent outline-none font-bold text-sm"></div>
                         <div class="time-box"><label class="time-label italic">موعد العودة 🕒</label><input type="time" id="in-t2" class="w-full bg-transparent outline-none font-bold text-sm"></div>
                     </div>
+
                     <div id="cap-box" class="space-y-4 border-t pt-4">
                         <div class="grid grid-cols-2 gap-3">
                             <select id="in-seats" class="form-input text-xs font-bold"><option value="1">1 مقعد</option><option value="2">2 مقعد</option><option value="3">3 مقاعد</option><option value="4">4 مقاعد</option></select>
@@ -71,8 +81,12 @@
                         </div>
                         <input type="number" id="in-price" placeholder="السعر للفرد" class="form-input font-bold text-center">
                     </div>
-                    <textarea id="in-notes" placeholder="ملاحظات..." class="form-input h-20 mb-3"></textarea>
-                    <input type="tel" id="in-phone" required placeholder="رقم واتسابك (01xxxxxxxxx)" class="form-input text-center font-black border-2 border-[#00a884]">
+
+                    <div class="border-t pt-4">
+                        <textarea id="in-notes" maxlength="300" placeholder="ملاحظات (مثل: متاح مكان للشنط، غير مدخن..)" class="form-input h-20 mb-3 font-medium"></textarea>
+                        <input type="tel" id="in-phone" required placeholder="رقم واتسابك (01xxxxxxxxx)" class="form-input text-center font-black border-2 border-[#00a884]">
+                    </div>
+
                     <button type="submit" id="btn-pub" class="btn-green p-4 text-lg shadow-lg">نشر الآن 🚀</button>
                 </form>
             </div>
@@ -80,10 +94,10 @@
 
         <!-- 3. رحلاتي -->
         <div id="view-my" class="tab-content">
-            <div class="bg-white p-6 rounded-2xl border-2 border-black mb-6 text-center">
+            <div class="bg-white p-6 rounded-2xl border-2 border-black mb-6 text-center shadow-sm">
                 <h2 class="font-bold mb-3">إدارة رحلاتي 👤</h2>
-                <input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold">
-                <button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold text-sm">عرض رحلاتي</button>
+                <input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold border-gray-400">
+                <button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold">عرض رحلاتي الخاصة</button>
             </div>
             <div id="list-mine"></div>
         </div>
@@ -102,6 +116,24 @@
                         <button onclick="apiAdminReload()" class="bg-[#00a884] text-white px-6 rounded-xl font-bold">بحث</button>
                     </div>
                 </div>
+
+                <!-- نموذج تعديل الأدمن -->
+                <div id="edit-form-container" class="hidden admin-edit-box text-right space-y-3">
+                    <h3 class="font-black text-center border-b pb-2 mb-2">تعديل الرحلة</h3>
+                    <input type="hidden" id="edit-id">
+                    <select id="edit-o" class="form-input text-xs font-bold"></select>
+                    <select id="edit-d" class="form-input text-xs font-bold"></select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="edit-t1" placeholder="وقت الذهاب" class="form-input font-bold text-xs">
+                        <input type="text" id="edit-price" placeholder="السعر" class="form-input font-bold text-xs">
+                    </div>
+                    <textarea id="edit-notes" placeholder="الملاحظات" class="form-input h-16 text-xs"></textarea>
+                    <div class="flex gap-2 pt-2">
+                        <button onclick="saveAdminEdit()" class="flex-1 bg-green-600 text-white p-2 rounded-lg font-bold">حفظ التغييرات</button>
+                        <button onclick="document.getElementById('edit-form-container').classList.add('hidden')" class="bg-gray-400 text-white p-2 rounded-lg font-bold">إلغاء</button>
+                    </div>
+                </div>
+
                 <div id="list-admin"></div>
             </div>
         </div>
@@ -114,7 +146,15 @@
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
         const sb = supabase.createClient(SB_URL, SB_KEY);
 
-        const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "عين شمس", "الهايكستب", "جسر السويس", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
+        // القائمة المحدثة مع إضافة مدينة نصر قبل مصر الجديدة
+        const LOCS = [
+            "أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", 
+            "المعادي", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", 
+            "شبرا الخيمة", "المرج", "المرج الجديدة", "عين شمس", "الهايكستب", 
+            "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", 
+            "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", 
+            "الشروق", "العاصمة الإدارية"
+        ];
 
         // --- وظائف UI ---
         function uiTab(id) {
@@ -127,9 +167,10 @@
 
         function uiRole(r) {
             document.getElementById('in-role').value = r;
-            document.getElementById('cap-box').classList.toggle('hidden', r === 'passenger');
-            document.getElementById('role-cap').className = r === 'captain' ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
-            document.getElementById('role-pas').className = r === 'passenger' ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
+            const isCap = r === 'captain';
+            document.getElementById('cap-box').classList.toggle('hidden', !isCap);
+            document.getElementById('role-cap').className = isCap ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
+            document.getElementById('role-pas').className = !isCap ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
         }
 
         function t12(t) {
@@ -142,9 +183,8 @@
         // --- التعامل مع البيانات ---
         async function apiGetTrips() {
             const list = document.getElementById('list-public');
-            list.innerHTML = '<p class="text-center py-20 text-gray-400">جاري تجميع المناطق...</p>';
+            list.innerHTML = '<p class="text-center py-20 text-gray-400 font-bold">جاري تحديث الرحلات...</p>';
             
-            // التعديل الجوهري: الترتيب حسب نقطة الانطلاق (Origin) تصاعدياً، ثم الوقت تنازلياً
             let q = sb.from('trips').select('*').eq('status', 'active')
                       .order('origin', {ascending: true})
                       .order('created_at', {ascending: false});
@@ -160,28 +200,29 @@
 
         async function apiPost(e) {
             e.preventDefault();
-            const btn = document.getElementById('btn-pub'); btn.disabled = true;
+            const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
+            const role = document.getElementById('in-role').value;
+            
             const row = {
-                user_role: document.getElementById('in-role').value,
-                origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
+                user_role: role, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
                 departure_time: t12(document.getElementById('in-t1').value), return_time: t12(document.getElementById('in-t2').value),
                 whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
-                seats_available: parseInt(document.getElementById('in-seats').value) || 0,
-                has_ac: document.getElementById('in-ac').value === "true",
-                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "طلب راكب", status: 'active'
+                seats_available: role === 'captain' ? parseInt(document.getElementById('in-seats').value) : 0,
+                has_ac: role === 'captain' ? (document.getElementById('in-ac').value === "true") : false,
+                price_per_seat: role === 'captain' ? (document.getElementById('in-price').value + " ج.م") : "طلب راكب", status: 'active'
             };
-            await sb.from('trips').insert([row]);
-            alert('تم النشر بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search');
-            btn.disabled = false;
+
+            const {error} = await sb.from('trips').insert([row]);
+            if(error) alert('خطأ: ' + error.message);
+            else { alert('تم النشر بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search'); }
+            btn.disabled = false; btn.innerText = "نشر الآن 🚀";
         }
 
         async function apiGetMyTrips() {
             const p = document.getElementById('my-phone').value;
             if(!p) return alert('أدخل رقمك');
-            // ترتيب "رحلاتي" حسب نقطة الانطلاق أيضاً
-            const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p)
-                                  .order('origin', {ascending: true});
-            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : 'لا توجد نتائج لهذا الرقم';
+            const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('origin', {ascending: true});
+            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5">لا توجد نتائج</p>';
         }
 
         function apiAdminLogin() {
@@ -193,10 +234,9 @@
         }
 
         async function apiAdminReload() {
-            // ترتيب لوحة الإدارة حسب نقطة الانطلاق لتسهيل المراجعة
             let q = sb.from('trips').select('*').order('origin', {ascending: true});
-            const ph = document.getElementById('admin-search-phone').value;
-            if(ph) q = q.ilike('whatsapp_number', '%'+ph+'%');
+            const searchPhone = document.getElementById('admin-search-phone').value;
+            if(searchPhone) q = q.ilike('whatsapp_number', '%'+searchPhone+'%');
             const {data} = await q;
             document.getElementById('list-admin').innerHTML = data.map(t => card(t, 'admin')).join('');
         }
@@ -209,17 +249,41 @@
             apiAdminReload(); apiGetMyTrips(); apiGetTrips();
         }
 
+        function openAdminEdit(id, o, d, t1, pr, nt) {
+            document.getElementById('edit-form-container').classList.remove('hidden');
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-o').value = o;
+            document.getElementById('edit-d').value = d;
+            document.getElementById('edit-t1').value = t1;
+            document.getElementById('edit-price').value = pr;
+            document.getElementById('edit-notes').value = nt || '';
+            window.scrollTo(0,0);
+        }
+
+        async function saveAdminEdit() {
+            const id = document.getElementById('edit-id').value;
+            await sb.from('trips').update({
+                origin: document.getElementById('edit-o').value,
+                destination: document.getElementById('edit-d').value,
+                departure_time: document.getElementById('edit-t1').value,
+                price_per_seat: document.getElementById('edit-price').value,
+                notes: document.getElementById('edit-notes').value
+            }).eq('id', id);
+            alert('تم الحفظ'); document.getElementById('edit-form-container').classList.add('hidden');
+            apiAdminReload();
+        }
+
         function card(t, mode) {
             const isCap = t.user_role === 'captain';
             const isDone = t.status === 'completed';
-            let btnUI = '';
             
+            let btnUI = '';
             if(mode === 'public') {
                 btnUI = `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-2xl font-bold text-sm mt-2 shadow-md">تواصل واتساب 💬</a>`;
             } else {
                 btnUI = `<div class="grid grid-cols-3 gap-2 mt-4">
                     ${isDone ? `<button onclick="apiAction('${t.id}', 'active')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done')" class="bg-black text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">✅ اكتمال</button>`}
-                    <button onclick="alert('استخدم لوحة الإدارة للتعديل التفصيلي')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">📝 تعديل</button>
+                    ${mode === 'admin' ? `<button onclick="openAdminEdit('${t.id}','${t.origin}','${t.destination}','${t.departure_time}','${t.price_per_seat}','${t.notes}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">📝 تعديل</button>` : '<span></span>'}
                     <button onclick="apiAction('${t.id}', 'del')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-bold shadow-sm">❌ حذف</button>
                 </div>`;
             }
@@ -227,21 +291,23 @@
             return `
                 <div class="trip-card border-l-4 ${isCap ? 'border-l-blue-500' : 'border-l-orange-500'}">
                     <span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>
+                    
                     <div class="${isDone && mode !== 'admin' ? 'content-fade' : ''}">
                         <div class="flex justify-between items-start pt-4 mb-1">
                             <h3 class="font-bold text-sm text-slate-800">${t.origin} ⬅️ ${t.destination}</h3>
                             <span class="text-[#00a884] font-bold text-xs">${t.price_per_seat}</span>
                         </div>
-                        <div class="text-[10px] text-gray-500 font-bold mb-2">🕘 الذهاب: ${t.departure_time} ${t.return_time ? ' | عودة: '+t.return_time : ''}</div>
-                        ${t.notes ? `<p class="text-[10px] bg-gray-50 p-2 rounded-lg italic text-gray-600 mb-2 border-r-2 border-gray-300">"${t.notes}"</p>` : ''}
-                        ${isDone ? '<p class="text-[9px] text-red-500 font-bold mb-1">● هذه الرحلة مكتملة ومخفية عن الجمهور</p>' : ''}
+                        <div class="text-[10px] text-gray-500 font-bold mb-2 italic">🕘 الذهاب: ${t.departure_time} ${t.return_time ? ' | عودة: '+t.return_time : ''}</div>
+                        ${t.notes ? `<p class="text-[10px] bg-gray-50 p-2 rounded-lg italic text-gray-600 mb-2 border-r-2 border-gray-300 font-medium">"${t.notes}"</p>` : ''}
+                        ${isDone ? '<p class="text-[9px] text-red-500 font-bold mb-2">● هذه الرحلة مكتملة ومخفية عن الجمهور</p>' : ''}
                     </div>
+                    
                     ${btnUI}
                 </div>`;
         }
 
         window.onload = () => {
-            ['in-o', 'in-d', 'f-o', 'f-d'].forEach(id => {
+            ['in-o', 'in-d', 'f-o', 'f-d', 'edit-o', 'edit-d'].forEach(id => {
                 const el = document.getElementById(id);
                 el.innerHTML = `<option value="">${id.includes('f-') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
                 LOCS.forEach(l => { el.innerHTML += `<option value="${l}">${l}</option>`; });
