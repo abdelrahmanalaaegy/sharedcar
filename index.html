@@ -3,247 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - النسخة الشغالة</title>
+    <title>ShareRide - النسخة الاحترافية</title>
     
-    <!-- مكتبات التشغيل -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; padding-bottom: 80px; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; padding-bottom: 80px; }
         .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .nav-btn.active { color: #00a884; border-bottom: 4px solid #00a884; font-weight: bold; }
-        .form-input { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #d1d5db; outline: none; background: white; font-size: 14px; }
-        .trip-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 16px; border: 1px solid #e5e7eb; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; }
-        .label-time { font-size: 10px; font-weight: bold; color: #00a884; margin-bottom: 2px; display: block; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .nav-btn.active { color: #00a884; border-bottom: 4px solid #00a884; font-weight: 900; }
+        .form-input { width: 100%; padding: 12px; border-radius: 15px; border: 1px solid #cbd5e1; outline: none; background: white; font-size: 14px; }
+        .form-input:focus { border-color: #00a884; ring: 2px ring-[#00a884]/20; }
+        
+        .trip-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; position: relative; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .role-badge { position: absolute; left: 12px; top: 12px; padding: 4px 10px; border-radius: 8px; font-size: 9px; font-weight: 900; color: white; }
+        
+        .time-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px 12px; }
+        .time-label { font-size: 10px; font-weight: 800; color: #00a884; margin-bottom: 2px; display: block; }
+        .time-input { background: transparent; width: 100%; border: none; outline: none; font-size: 14px; font-weight: bold; }
+        
+        .btn-green { background: #00a884; color: white; border-radius: 15px; font-weight: bold; width: 100%; padding: 14px; transition: 0.2s; }
+        .btn-green:active { transform: scale(0.96); }
+        .status-done { opacity: 0.5; filter: grayscale(1); }
     </style>
 </head>
 <body>
 
     <!-- Header -->
     <header class="bg-white shadow-sm sticky top-0 z-[100] p-4">
-        <h1 class="text-xl font-black text-[#00a884] text-center mb-4 italic">ShareRide 🚗</h1>
+        <h1 class="text-xl font-black text-[#00a884] text-center italic mb-4">ShareRide 🚗</h1>
         <div class="flex justify-around text-[10px] font-bold">
-            <button onclick="showTab('search')" id="btn-search" class="nav-btn pb-2 active">🔍 البحث</button>
-            <button onclick="showTab('post')" id="btn-post" class="nav-btn pb-2 text-gray-400">➕ انشر</button>
-            <button onclick="showTab('my-trips')" id="btn-my-trips" class="nav-btn pb-2 text-gray-400">👤 رحلاتي</button>
-            <button onclick="showTab('admin')" id="btn-admin" class="nav-btn pb-2 text-gray-400">⚙️ الإدارة</button>
+            <button onclick="uiTab('search')" id="nav-search" class="nav-btn pb-2 active">🔍 البحث</button>
+            <button onclick="uiTab('post')" id="nav-post" class="nav-btn pb-2 text-gray-400">➕ انشر</button>
+            <button onclick="uiTab('my')" id="nav-my" class="nav-btn pb-2 text-gray-400">👤 رحلاتي</button>
+            <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn pb-2 text-gray-400">⚙️ الإدارة</button>
         </div>
     </header>
 
     <main class="max-w-md mx-auto p-4">
 
         <!-- 1. البحث -->
-        <div id="tab-search" class="tab-content active">
-            <div class="bg-white p-4 rounded-2xl mb-6 border border-gray-200">
-                <div class="grid grid-cols-2 gap-2 mb-3">
-                    <select id="filter-o" class="form-input text-xs font-bold"><option value="">من: كل المناطق</option></select>
-                    <select id="filter-d" class="form-input text-xs font-bold"><option value="">إلى: كل المناطق</option></select>
+        <div id="view-search" class="tab-content active">
+            <div class="bg-white p-4 rounded-2xl mb-6 border shadow-sm">
+                <div class="grid grid-cols-2 gap-2 mb-3 font-bold text-xs">
+                    <select id="f-o" class="form-input"></select>
+                    <select id="f-d" class="form-input"></select>
                 </div>
-                <button onclick="getTrips()" class="w-full bg-[#00a884] text-white p-3 rounded-xl font-bold">تحديث النتائج 🔄</button>
+                <button onclick="apiGetTrips()" class="btn-green">تحديث النتائج 🔄</button>
             </div>
-            <div id="list-all"></div>
+            <div id="list-public"></div>
         </div>
 
         <!-- 2. النشر -->
-        <div id="tab-post" class="tab-content">
-            <div class="bg-white p-6 rounded-[2rem] border border-gray-200">
-                <form id="postForm" onsubmit="publish(event)" class="space-y-4">
+        <div id="view-post" class="tab-content">
+            <div class="bg-white p-5 rounded-[2.2rem] shadow-sm border">
+                <form onsubmit="apiPost(event)" class="space-y-4">
                     <div class="flex bg-gray-100 p-1 rounded-xl">
-                        <button type="button" id="role-c" onclick="setRole('captain')" class="flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884]">أنا كابتن 🚗</button>
-                        <button type="button" id="role-p" onclick="setRole('passenger')" class="flex-1 py-2 rounded-lg font-bold text-xs text-gray-500">أنا راكب 🙋‍♂️</button>
+                        <button type="button" id="role-cap" onclick="uiRole('captain')" class="flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm">أنا كابتن 🚗</button>
+                        <button type="button" id="role-pas" onclick="uiRole('passenger')" class="flex-1 py-2 rounded-lg font-bold text-xs text-gray-500">أنا راكب 🙋‍♂️</button>
                     </div>
-                    <input type="hidden" id="role" value="captain">
+                    <input type="hidden" id="in-role" value="captain">
 
                     <div class="grid grid-cols-2 gap-3">
-                        <select id="o" required class="form-input text-xs font-bold"></select>
-                        <select id="d" required class="form-input text-xs font-bold"></select>
+                        <select id="in-o" required class="form-input text-xs font-bold"></select>
+                        <select id="in-d" required class="form-input text-xs font-bold"></select>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-gray-50 p-2 rounded-lg border">
-                            <label class="label-time italic">🕒 موعد الانطلاق</label>
-                            <input type="time" id="t1" required class="w-full bg-transparent outline-none text-sm font-bold">
+                        <div class="time-box">
+                            <label class="time-label italic">موعد الانطلاق 🕒</label>
+                            <input type="time" id="in-t1" required class="time-input">
                         </div>
-                        <div class="bg-gray-50 p-2 rounded-lg border">
-                            <label class="label-time italic">🕒 موعد العودة</label>
-                            <input type="time" id="t2" class="w-full bg-transparent outline-none text-sm font-bold">
+                        <div class="time-box">
+                            <label class="time-label italic">موعد العودة 🕒</label>
+                            <input type="time" id="in-t2" class="time-input">
                         </div>
                     </div>
 
-                    <div id="cap-only" class="space-y-4 border-t pt-4">
+                    <div id="cap-box" class="space-y-4 border-t pt-4">
                         <div class="grid grid-cols-2 gap-3">
-                            <select id="seats" class="form-input text-xs font-bold"><option value="1">مقعد 1</option><option value="2">2 مقعد</option><option value="3">3 مقاعد</option><option value="4">4 مقاعد</option></select>
-                            <select id="ac" class="form-input text-xs font-bold"><option value="true">✅ مكيفة</option><option value="false">❌ بلا تكييف</option></select>
+                            <select id="in-seats" class="form-input text-xs font-bold"><option value="1">1 مقعد</option><option value="2">2 مقعد</option><option value="3">3 مقاعد</option><option value="4">4 مقاعد</option></select>
+                            <select id="in-ac" class="form-input text-xs font-bold"><option value="true">✅ مكيفة</option><option value="false">❌ بلا تكييف</option></select>
                         </div>
-                        <input type="number" id="price" placeholder="السعر المطلوب للفرد" class="form-input font-bold">
+                        <input type="number" id="in-price" placeholder="السعر المطلوب (ج.م)" class="form-input font-bold text-center">
                     </div>
 
                     <div class="border-t pt-4">
-                        <textarea id="notes" placeholder="ملاحظات (مثل: متاح مكان للشنط..)" class="form-input h-20 mb-3"></textarea>
-                        <input type="tel" id="phone" required placeholder="رقم واتسابك (01xxxxxxxxx)" class="form-input text-center font-bold border-2 border-[#00a884]">
+                        <textarea id="in-notes" maxlength="300" placeholder="ملاحظات إضافية..." class="form-input h-20 mb-3"></textarea>
+                        <input type="tel" id="in-phone" required placeholder="رقم واتسابك (01xxxxxxxxx)" class="form-input text-center font-black border-2 border-[#00a884]">
                     </div>
 
-                    <button type="submit" id="btn-pub" class="w-full bg-[#00a884] text-white p-4 rounded-xl font-bold text-lg">نشر الآن 🚀</button>
+                    <button type="submit" id="btn-pub" class="btn-green p-4 text-lg shadow-lg">نشر الآن 🚀</button>
                 </form>
             </div>
         </div>
 
         <!-- 3. رحلاتي -->
-        <div id="tab-my-trips" class="tab-content text-center">
-            <div class="bg-white p-6 rounded-2xl border mb-6">
-                <h2 class="font-bold mb-3">إدارة رحلاتي 👤</h2>
-                <input type="tel" id="my-phone" placeholder="أدخل رقمك 01xxxxxxxxx" class="form-input text-center mb-3">
-                <button onclick="getMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold">عرض رحلاتي</button>
+        <div id="view-my" class="tab-content text-center">
+            <div class="bg-white p-6 rounded-2xl border-2 border-black mb-6 shadow-sm">
+                <h2 class="font-bold mb-3 italic">إدارة رحلاتي</h2>
+                <input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold border-gray-400">
+                <button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold">عرض رحلاتي الخاصة</button>
             </div>
             <div id="list-mine"></div>
         </div>
 
         <!-- 4. الإدارة -->
-        <div id="tab-admin" class="tab-content text-center">
-            <input type="password" id="pass" placeholder="كلمة المرور" class="form-input text-center mb-4">
-            <button onclick="adminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-bold">دخول الإدارة</button>
-            <div id="list-admin" class="mt-6"></div>
+        <div id="view-admin" class="tab-content text-center">
+            <div id="admin-auth" class="bg-white p-8 rounded-2xl border shadow-sm">
+                <h2 class="font-bold mb-4">دخول المسؤول</h2>
+                <input type="password" id="admin-pass" placeholder="كلمة المرور" class="form-input text-center mb-4 border-2">
+                <button onclick="apiAdminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-bold">دخول</button>
+            </div>
+            <div id="admin-panel" class="hidden">
+                <div id="list-admin"></div>
+            </div>
         </div>
 
     </main>
 
     <script>
-        // التكوين
+        // --- الربط ---
         const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
         const sb = supabase.createClient(SB_URL, SB_KEY);
 
         const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "عين شمس", "الهايكستب", "جسر السويس", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
 
-        // تبديل التبويبات
-        function showTab(id) {
+        // --- الواجهة ---
+        function uiTab(id) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('tab-' + id).classList.add('active');
+            document.getElementById('view-' + id).classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'text-[#00a884]'));
-            document.getElementById('btn-' + id).classList.add('active');
-            if(id === 'search') getTrips();
+            document.getElementById('nav-' + id).classList.add('active');
+            if(id === 'search') apiGetTrips();
         }
 
-        // تبديل الدور
-        function setRole(r) {
-            document.getElementById('role').value = r;
+        function uiRole(r) {
+            document.getElementById('in-role').value = r;
             const isCap = r === 'captain';
-            document.getElementById('cap-only').style.display = isCap ? 'block' : 'none';
-            document.getElementById('role-c').className = isCap ? 'flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm' : 'flex-1 py-2 rounded-lg font-bold text-xs text-gray-500';
-            document.getElementById('role-p').className = !isCap ? 'flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm' : 'flex-1 py-2 rounded-lg font-bold text-xs text-gray-500';
+            document.getElementById('cap-box').classList.toggle('hidden', !isCap);
+            document.getElementById('role-cap').className = isCap ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
+            document.getElementById('role-pas').className = !isCap ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
         }
 
-        // تحويل الوقت
-        function format12(t) {
+        function t12(t) {
             if(!t) return null;
             let [h, m] = t.split(':'); h = parseInt(h);
             const s = h >= 12 ? 'مساءً' : 'صباحاً'; h = h % 12 || 12;
             return `${h}:${m} ${s}`;
         }
 
-        // جلب الرحلات
-        async function getTrips() {
-            const list = document.getElementById('list-all');
-            list.innerHTML = 'جاري التحميل...';
-            const o = document.getElementById('filter-o').value;
-            const d = document.getElementById('filter-d').value;
+        // --- البيانات ---
+        async function apiGetTrips() {
+            const list = document.getElementById('list-public');
+            list.innerHTML = '<p class="text-center py-20 text-gray-400">جاري التحميل مشوارك...</p>';
+            const o = document.getElementById('f-o').value;
+            const d = document.getElementById('f-d').value;
             
             let q = sb.from('trips').select('*').eq('status', 'active').order('created_at', {ascending: false});
             if(o) q = q.eq('origin', o);
             if(d) q = q.eq('destination', d);
             
             const {data} = await q;
-            list.innerHTML = data && data.length ? data.map(t => render(t, false)).join('') : 'لا توجد رحلات حالياً';
+            list.innerHTML = data && data.length ? data.map(t => card(t, false)).join('') : '<p class="text-center py-20 text-gray-400">لا توجد رحلات حالياً</p>';
         }
 
-        // جلب رحلاتي
-        async function getMyTrips() {
-            const p = document.getElementById('my-phone').value;
-            if(!p) return alert('أدخل رقمك');
-            const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('created_at', {ascending: false});
-            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => render(t, true)).join('') : 'لا توجد رحلات لهذا الرقم';
-        }
-
-        // الحذف والاكتمال
-        async function doAction(id, action) {
-            if(!confirm('هل أنت متأكد؟')) return;
-            if(action === 'del') await sb.from('trips').delete().eq('id', id);
-            else await sb.from('trips').update({status: 'completed'}).eq('id', id);
-            alert('تم بنجاح');
-            getMyTrips();
-            getTrips();
-        }
-
-        // النشر
-        async function publish(e) {
+        async function apiPost(e) {
             e.preventDefault();
             const btn = document.getElementById('btn-pub');
             btn.disabled = true; btn.innerText = "جاري الحفظ...";
-            const role = document.getElementById('role').value;
+            const role = document.getElementById('in-role').value;
             
-            const payload = {
-                user_role: role,
-                origin: document.getElementById('o').value,
-                destination: document.getElementById('d').value,
-                departure_time: format12(document.getElementById('t1').value),
-                return_time: format12(document.getElementById('t2').value),
-                whatsapp_number: "2" + document.getElementById('phone').value,
-                notes: document.getElementById('notes').value,
-                seats_available: role === 'captain' ? parseInt(document.getElementById('seats').value) : 0,
-                has_ac: role === 'captain' ? document.getElementById('ac').value === "true" : false,
-                price_per_seat: role === 'captain' ? (document.getElementById('price').value + " ج.م") : "طلب راكب",
+            const row = {
+                user_role: role, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
+                departure_time: t12(document.getElementById('in-t1').value), return_time: t12(document.getElementById('in-t2').value),
+                whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
+                seats_available: role === 'captain' ? parseInt(document.getElementById('in-seats').value) : 0,
+                has_ac: role === 'captain' ? document.getElementById('in-ac').value === "true" : false,
+                price_per_seat: role === 'captain' ? (document.getElementById('in-price').value + " ج.م") : "طلب راكب",
                 status: 'active'
             };
 
-            const {error} = await sb.from('trips').insert([payload]);
+            const {error} = await sb.from('trips').insert([row]);
             if(error) alert('خطأ: ' + error.message);
-            else { alert('تم النشر! 🎉'); document.getElementById('postForm').reset(); showTab('search'); }
+            else { alert('تم النشر بنجاح! 🎉'); document.getElementById('in-notes').value = ''; uiTab('search'); }
             btn.disabled = false; btn.innerText = "نشر الآن 🚀";
         }
 
-        // رسم البطاقة
-        function render(t, manage) {
+        async function apiGetMyTrips() {
+            const p = document.getElementById('my-phone').value;
+            if(!p) return alert('أدخل رقمك');
+            const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('created_at', {ascending: false});
+            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, true)).join('') : 'لا يوجد نتائج';
+        }
+
+        async function apiAction(id, action) {
+            if(!confirm('هل تود الاستمرار؟')) return;
+            if(action === 'del') await sb.from('trips').delete().eq('id', id);
+            else await sb.from('trips').update({status: 'completed'}).eq('id', id);
+            alert('تم التحديث بنجاح!');
+            apiGetMyTrips(); apiGetTrips();
+        }
+
+        function apiAdminLogin() {
+            // الباسوورد الجديد كما طلبت
+            if(document.getElementById('admin-pass').value === 'Malika2017') {
+                document.getElementById('admin-auth').classList.add('hidden');
+                document.getElementById('admin-panel').classList.remove('hidden');
+                sb.from('trips').select('*').order('created_at',{ascending:false}).then(({data}) => {
+                    document.getElementById('list-admin').innerHTML = data.map(t => card(t, true)).join('');
+                });
+            } else alert('كلمة المرور Malika2017 خاطئة!');
+        }
+
+        function card(t, manage) {
             const isCap = t.user_role === 'captain';
             const isDone = t.status === 'completed';
             return `
-                <div class="trip-card border-l-4 ${isCap ? 'border-l-blue-500' : 'border-l-orange-500'} ${isDone ? 'opacity-50' : ''}">
-                    <span class="absolute left-2 top-2 text-[8px] font-bold px-2 py-1 rounded bg-gray-100">${isCap?'كابتن':'راكب'}</span>
-                    <h3 class="font-bold text-sm mt-2">${t.origin} ⬅️ ${t.destination}</h3>
-                    <div class="text-[10px] text-gray-500 my-1 font-bold">🕒 ${t.departure_time} ${t.return_time ? ' | عودة: '+t.return_time : ''}</div>
-                    ${isCap ? `<div class="text-[#00a884] font-bold text-xs mb-2">${t.price_per_seat} | ❄️ ${t.has_ac?'مكيفة':'بدون'}</div>` : ''}
-                    ${t.notes ? `<p class="text-[9px] bg-gray-50 p-2 rounded italic text-gray-600 mb-2 border-r-2 border-gray-200">"${t.notes}"</p>` : ''}
+                <div class="trip-card border-l-4 ${isCap ? 'border-l-blue-500' : 'border-l-orange-500'} ${isDone ? 'status-done' : ''}">
+                    <span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>
+                    <div class="flex justify-between items-start pt-4 mb-2">
+                        <h3 class="font-bold text-sm text-slate-800">${t.origin} ⬅️ ${t.destination}</h3>
+                        ${isCap ? `<span class="text-[#00a884] font-bold text-xs">${t.price_per_seat}</span>` : ''}
+                    </div>
+                    <div class="text-[10px] text-gray-500 font-bold mb-2">🕘 الذهاب: ${t.departure_time} ${t.return_time ? ' | عودة: '+t.return_time : ''}</div>
+                    ${t.notes ? `<p class="text-[10px] bg-gray-50 p-2 rounded-lg italic text-gray-600 mb-3">"${t.notes}"</p>` : ''}
                     ${manage ? `
                         <div class="flex gap-2">
-                            ${!isDone ? `<button onclick="doAction('${t.id}', 'done')" class="flex-1 bg-black text-white p-2 rounded-lg text-[10px] font-bold">✅ اكتملت</button>` : ''}
-                            <button onclick="doAction('${t.id}', 'del')" class="bg-red-50 text-red-600 p-2 rounded-lg text-[10px] font-bold">❌ حذف</button>
+                            ${!isDone ? `<button onclick="apiAction('${t.id}', 'done')" class="flex-1 bg-black text-white p-2 rounded-xl text-[10px] font-bold shadow-sm">✅ اكتملت</button>` : '<span class="text-green-600 font-bold p-2 text-xs">تمت ✓</span>'}
+                            <button onclick="apiAction('${t.id}', 'del')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[10px] font-bold shadow-sm">❌ حذف</button>
                         </div>
                     ` : `
-                        <a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-xl font-bold text-xs mt-2">تواصل واتساب 💬</a>
+                        <a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-2xl font-bold text-sm mt-2 shadow-md">تواصل عبر واتساب 💬</a>
                     `}
                 </div>
             `;
         }
 
-        function adminLogin() {
-            if(document.getElementById('pass').value === '123') {
-                sb.from('trips').select('*').order('created_at',{ascending:false}).then(({data}) => {
-                    document.getElementById('list-admin').innerHTML = data.map(t => render(t, true)).join('');
-                });
-            } else alert('خطأ');
-        }
-
         window.onload = () => {
-            const targets = ['o', 'd', 'filter-o', 'filter-d'];
-            targets.forEach(id => {
+            ['in-o', 'in-d', 'f-o', 'f-d'].forEach(id => {
                 const el = document.getElementById(id);
-                el.innerHTML = `<option value="">${id.includes('filter') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
+                el.innerHTML = `<option value="">${id.includes('f-') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
                 LOCS.forEach(l => { el.innerHTML += `<option value="${l}">${l}</option>`; });
             });
-            getTrips();
+            apiGetTrips();
         };
     </script>
 </body>
-                            </html>
+    </html>
