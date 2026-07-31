@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - النسخة الاحترافية</title>
+    <title>ShareRide - النسخة الشاملة</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
@@ -19,7 +19,8 @@
         .time-label { font-size: 10px; font-weight: 800; color: #00a884; margin-bottom: 2px; display: block; }
         .btn-green { background: #00a884; color: white; border-radius: 15px; font-weight: bold; width: 100%; padding: 14px; }
         .content-fade { opacity: 0.5; filter: grayscale(0.8); }
-        .admin-edit-box { background: #f0fdf4; border: 2px solid #00a884; padding: 15px; border-radius: 20px; margin-bottom: 15px; }
+        .edit-overlay { background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 20px; margin-bottom: 15px; }
+        .feature-badge { background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -35,6 +36,35 @@
     </header>
 
     <main class="max-w-md mx-auto p-4">
+
+        <!-- نموذج التعديل المشترك (يظهر عند الضغط على تعديل) -->
+        <div id="global-edit-form" class="hidden edit-overlay text-right space-y-3">
+            <h3 class="font-black text-center border-b border-amber-200 pb-2 mb-2 text-amber-800">📝 تعديل بيانات الرحلة</h3>
+            <input type="hidden" id="edit-id">
+            <input type="hidden" id="edit-mode"> <!-- 'my' or 'admin' -->
+            
+            <div class="grid grid-cols-2 gap-2">
+                <select id="edit-o" class="form-input text-xs font-bold"></select>
+                <select id="edit-d" class="form-input text-xs font-bold"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="text" id="edit-t1" placeholder="وقت الذهاب" class="form-input text-xs font-bold">
+                <input type="text" id="edit-t2" placeholder="وقت العودة" class="form-input text-xs font-bold">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="text" id="edit-price" placeholder="السعر" class="form-input text-xs font-bold">
+                <select id="edit-ac" class="form-input text-xs font-bold">
+                    <option value="true">✅ مكيفة</option>
+                    <option value="false">❌ بدون تكييف</option>
+                </select>
+            </div>
+            <textarea id="edit-notes" placeholder="الملاحظات" class="form-input h-16 text-xs font-bold"></textarea>
+            
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold shadow-md">حفظ التعديلات</button>
+                <button onclick="document.getElementById('global-edit-form').classList.add('hidden')" class="bg-gray-400 text-white p-3 rounded-xl font-bold">إلغاء</button>
+            </div>
+        </div>
 
         <!-- 1. البحث -->
         <div id="view-search" class="tab-content active">
@@ -59,31 +89,25 @@
                     <input type="hidden" id="in-role" value="captain">
                     
                     <div class="grid grid-cols-2 gap-3 text-xs font-bold">
-                        <div>
-                            <label class="block text-[10px] text-gray-400 mb-1">من منطقة:</label>
-                            <select id="in-o" required class="form-input"></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] text-gray-400 mb-1">إلى منطقة:</label>
-                            <select id="in-d" required class="form-input"></select>
-                        </div>
+                        <select id="in-o" required class="form-input"></select>
+                        <select id="in-d" required class="form-input"></select>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="time-box"><label class="time-label italic">موعد الانطلاق 🕒</label><input type="time" id="in-t1" required class="w-full bg-transparent outline-none font-bold text-sm"></div>
-                        <div class="time-box"><label class="time-label italic">موعد العودة 🕒</label><input type="time" id="in-t2" class="w-full bg-transparent outline-none font-bold text-sm"></div>
+                        <div class="time-box"><label class="time-label">موعد الانطلاق 🕒</label><input type="time" id="in-t1" required class="w-full bg-transparent outline-none font-bold text-sm"></div>
+                        <div class="time-box"><label class="time-label">موعد العودة 🕒</label><input type="time" id="in-t2" class="w-full bg-transparent outline-none font-bold text-sm"></div>
                     </div>
 
                     <div id="cap-box" class="space-y-4 border-t pt-4">
                         <div class="grid grid-cols-2 gap-3">
-                            <select id="in-seats" class="form-input text-xs font-bold"><option value="1">1 مقعد</option><option value="2">2 مقعد</option><option value="3">3 مقاعد</option><option value="4">4 مقاعد</option></select>
+                            <select id="in-seats" class="form-input text-xs font-bold"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select>
                             <select id="in-ac" class="form-input text-xs font-bold"><option value="true">✅ مكيفة</option><option value="false">❌ بلا تكييف</option></select>
                         </div>
-                        <input type="number" id="in-price" placeholder="السعر للفرد" class="form-input font-bold text-center">
+                        <input type="number" id="in-price" placeholder="السعر للفرد (ج.م)" class="form-input font-bold text-center">
                     </div>
 
                     <div class="border-t pt-4">
-                        <textarea id="in-notes" maxlength="300" placeholder="ملاحظات (مثل: متاح مكان للشنط، غير مدخن..)" class="form-input h-20 mb-3 font-medium"></textarea>
+                        <textarea id="in-notes" maxlength="300" placeholder="ملاحظات (مثل: متاح مكان للشنط..)" class="form-input h-20 mb-3"></textarea>
                         <input type="tel" id="in-phone" required placeholder="رقم واتسابك (01xxxxxxxxx)" class="form-input text-center font-black border-2 border-[#00a884]">
                     </div>
 
@@ -110,30 +134,9 @@
             </div>
             <div id="admin-panel" class="hidden">
                 <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm text-right">
-                    <label class="block text-[10px] font-bold text-gray-400 mb-1">بحث برقم الهاتف:</label>
-                    <div class="flex gap-2">
-                        <input type="tel" id="admin-search-phone" placeholder="01..." class="form-input flex-1 font-bold">
-                        <button onclick="apiAdminReload()" class="bg-[#00a884] text-white px-6 rounded-xl font-bold">بحث</button>
-                    </div>
+                    <input type="tel" id="admin-search-phone" placeholder="بحث برقم الهاتف..." class="form-input font-bold">
+                    <button onclick="apiAdminReload()" class="bg-[#00a884] text-white w-full mt-2 p-2 rounded-xl font-bold text-sm">بحث</button>
                 </div>
-
-                <!-- نموذج تعديل الأدمن -->
-                <div id="edit-form-container" class="hidden admin-edit-box text-right space-y-3">
-                    <h3 class="font-black text-center border-b pb-2 mb-2">تعديل الرحلة</h3>
-                    <input type="hidden" id="edit-id">
-                    <select id="edit-o" class="form-input text-xs font-bold"></select>
-                    <select id="edit-d" class="form-input text-xs font-bold"></select>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="edit-t1" placeholder="وقت الذهاب" class="form-input font-bold text-xs">
-                        <input type="text" id="edit-price" placeholder="السعر" class="form-input font-bold text-xs">
-                    </div>
-                    <textarea id="edit-notes" placeholder="الملاحظات" class="form-input h-16 text-xs"></textarea>
-                    <div class="flex gap-2 pt-2">
-                        <button onclick="saveAdminEdit()" class="flex-1 bg-green-600 text-white p-2 rounded-lg font-bold">حفظ التغييرات</button>
-                        <button onclick="document.getElementById('edit-form-container').classList.add('hidden')" class="bg-gray-400 text-white p-2 rounded-lg font-bold">إلغاء</button>
-                    </div>
-                </div>
-
                 <div id="list-admin"></div>
             </div>
         </div>
@@ -141,22 +144,12 @@
     </main>
 
     <script>
-        // --- الإعدادات ---
         const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
         const sb = supabase.createClient(SB_URL, SB_KEY);
 
-        // القائمة المحدثة مع إضافة مدينة نصر قبل مصر الجديدة
-        const LOCS = [
-            "أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", 
-            "المعادي", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", 
-            "شبرا الخيمة", "المرج", "المرج الجديدة", "عين شمس", "الهايكستب", 
-            "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", 
-            "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", 
-            "الشروق", "العاصمة الإدارية"
-        ];
+        const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "عين شمس", "الهايكستب", "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
 
-        // --- وظائف UI ---
         function uiTab(id) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById('view-' + id).classList.add('active');
@@ -167,10 +160,9 @@
 
         function uiRole(r) {
             document.getElementById('in-role').value = r;
-            const isCap = r === 'captain';
-            document.getElementById('cap-box').classList.toggle('hidden', !isCap);
-            document.getElementById('role-cap').className = isCap ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
-            document.getElementById('role-pas').className = !isCap ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
+            document.getElementById('cap-box').classList.toggle('hidden', r === 'passenger');
+            document.getElementById('role-cap').className = r === 'captain' ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
+            document.getElementById('role-pas').className = r === 'passenger' ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
         }
 
         function t12(t) {
@@ -180,20 +172,14 @@
             return `${h}:${m} ${s}`;
         }
 
-        // --- التعامل مع البيانات ---
         async function apiGetTrips() {
             const list = document.getElementById('list-public');
             list.innerHTML = '<p class="text-center py-20 text-gray-400 font-bold">جاري تحديث الرحلات...</p>';
-            
-            let q = sb.from('trips').select('*').eq('status', 'active')
-                      .order('origin', {ascending: true})
-                      .order('created_at', {ascending: false});
-            
+            let q = sb.from('trips').select('*').eq('status', 'active').order('origin', {ascending: true}).order('created_at', {ascending: false});
             const o = document.getElementById('f-o').value;
             const d = document.getElementById('f-d').value;
             if(o) q = q.eq('origin', o);
             if(d) q = q.eq('destination', d);
-            
             const {data} = await q;
             list.innerHTML = data && data.length ? data.map(t => card(t, 'public')).join('') : '<p class="text-center py-20 text-gray-400">لا توجد رحلات حالياً</p>';
         }
@@ -202,7 +188,6 @@
             e.preventDefault();
             const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
             const role = document.getElementById('in-role').value;
-            
             const row = {
                 user_role: role, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
                 departure_time: t12(document.getElementById('in-t1').value), return_time: t12(document.getElementById('in-t2').value),
@@ -211,7 +196,6 @@
                 has_ac: role === 'captain' ? (document.getElementById('in-ac').value === "true") : false,
                 price_per_seat: role === 'captain' ? (document.getElementById('in-price').value + " ج.م") : "طلب راكب", status: 'active'
             };
-
             const {error} = await sb.from('trips').insert([row]);
             if(error) alert('خطأ: ' + error.message);
             else { alert('تم النشر بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search'); }
@@ -222,7 +206,7 @@
             const p = document.getElementById('my-phone').value;
             if(!p) return alert('أدخل رقمك');
             const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('origin', {ascending: true});
-            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5">لا توجد نتائج</p>';
+            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5">لا توجد رحلات لهذا الرقم</p>';
         }
 
         function apiAdminLogin() {
@@ -241,73 +225,90 @@
             document.getElementById('list-admin').innerHTML = data.map(t => card(t, 'admin')).join('');
         }
 
-        async function apiAction(id, act) {
+        async function apiAction(id, act, mode) {
             if(!confirm('تأكيد الإجراء؟')) return;
             if(act === 'del') await sb.from('trips').delete().eq('id', id);
             else if(act === 'done') await sb.from('trips').update({status: 'completed'}).eq('id', id);
             else if(act === 'active') await sb.from('trips').update({status: 'active'}).eq('id', id);
-            apiAdminReload(); apiGetMyTrips(); apiGetTrips();
+            
+            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
+            apiGetTrips();
         }
 
-        function openAdminEdit(id, o, d, t1, pr, nt) {
-            document.getElementById('edit-form-container').classList.remove('hidden');
-            document.getElementById('edit-id').value = id;
-            document.getElementById('edit-o').value = o;
-            document.getElementById('edit-d').value = d;
-            document.getElementById('edit-t1').value = t1;
-            document.getElementById('edit-price').value = pr;
-            document.getElementById('edit-notes').value = nt || '';
+        function openEdit(t, mode) {
+            document.getElementById('global-edit-form').classList.remove('hidden');
+            document.getElementById('edit-id').value = t.id;
+            document.getElementById('edit-mode').value = mode;
+            document.getElementById('edit-o').value = t.origin;
+            document.getElementById('edit-d').value = t.destination;
+            document.getElementById('edit-t1').value = t.departure_time;
+            document.getElementById('edit-t2').value = t.return_time || '';
+            document.getElementById('edit-price').value = t.price_per_seat;
+            document.getElementById('edit-ac').value = t.has_ac.toString();
+            document.getElementById('edit-notes').value = t.notes || '';
             window.scrollTo(0,0);
         }
 
-        async function saveAdminEdit() {
+        async function saveEdit() {
             const id = document.getElementById('edit-id').value;
-            await sb.from('trips').update({
+            const mode = document.getElementById('edit-mode').value;
+            const payload = {
                 origin: document.getElementById('edit-o').value,
                 destination: document.getElementById('edit-d').value,
                 departure_time: document.getElementById('edit-t1').value,
+                return_time: document.getElementById('edit-t2').value,
                 price_per_seat: document.getElementById('edit-price').value,
+                has_ac: document.getElementById('edit-ac').value === "true",
                 notes: document.getElementById('edit-notes').value
-            }).eq('id', id);
-            alert('تم الحفظ'); document.getElementById('edit-form-container').classList.add('hidden');
-            apiAdminReload();
+            };
+            await sb.from('trips').update(payload).eq('id', id);
+            alert('تم حفظ التعديلات بنجاح');
+            document.getElementById('global-edit-form').classList.add('hidden');
+            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
+            apiGetTrips();
         }
 
         function card(t, mode) {
             const isCap = t.user_role === 'captain';
             const isDone = t.status === 'completed';
-            
-            let btnUI = '';
+            let buttons = '';
+
             if(mode === 'public') {
-                btnUI = `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-2xl font-bold text-sm mt-2 shadow-md">تواصل واتساب 💬</a>`;
+                buttons = `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-2xl font-bold text-sm mt-3 shadow-md">تواصل واتساب 💬</a>`;
             } else {
-                btnUI = `<div class="grid grid-cols-3 gap-2 mt-4">
-                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done')" class="bg-black text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">✅ اكتمال</button>`}
-                    ${mode === 'admin' ? `<button onclick="openAdminEdit('${t.id}','${t.origin}','${t.destination}','${t.departure_time}','${t.price_per_seat}','${t.notes}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">📝 تعديل</button>` : '<span></span>'}
-                    <button onclick="apiAction('${t.id}', 'del')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-bold shadow-sm">❌ حذف</button>
+                buttons = `<div class="grid grid-cols-3 gap-2 mt-4">
+                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">✅ اكتمال</button>`}
+                    <button onclick='openEdit(${JSON.stringify(t)}, "${mode}")' class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-bold shadow-sm">📝 تعديل</button>
+                    <button onclick="apiAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-bold shadow-sm">❌ حذف</button>
                 </div>`;
             }
 
             return `
                 <div class="trip-card border-l-4 ${isCap ? 'border-l-blue-500' : 'border-l-orange-500'}">
                     <span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>
-                    
                     <div class="${isDone && mode !== 'admin' ? 'content-fade' : ''}">
                         <div class="flex justify-between items-start pt-4 mb-1">
                             <h3 class="font-bold text-sm text-slate-800">${t.origin} ⬅️ ${t.destination}</h3>
                             <span class="text-[#00a884] font-bold text-xs">${t.price_per_seat}</span>
                         </div>
                         <div class="text-[10px] text-gray-500 font-bold mb-2 italic">🕘 الذهاب: ${t.departure_time} ${t.return_time ? ' | عودة: '+t.return_time : ''}</div>
-                        ${t.notes ? `<p class="text-[10px] bg-gray-50 p-2 rounded-lg italic text-gray-600 mb-2 border-r-2 border-gray-300 font-medium">"${t.notes}"</p>` : ''}
-                        ${isDone ? '<p class="text-[9px] text-red-500 font-bold mb-2">● هذه الرحلة مكتملة ومخفية عن الجمهور</p>' : ''}
+                        
+                        ${isCap ? `
+                        <div class="flex gap-2 mb-2">
+                            <span class="feature-badge">💺 ${t.seats_available} مقاعد</span>
+                            <span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بلا تكييف'}</span>
+                        </div>` : ''}
+
+                        ${t.notes ? `<p class="text-[10px] bg-gray-50 p-2 rounded-lg italic text-gray-600 mb-2 border-r-2 border-gray-300">"${t.notes}"</p>` : ''}
+                        ${isDone ? '<p class="text-[9px] text-red-500 font-bold mb-1">● هذه الرحلة مكتملة ومخفية عن الجمهور</p>' : ''}
                     </div>
-                    
-                    ${btnUI}
+                    ${buttons}
                 </div>`;
         }
 
         window.onload = () => {
-            ['in-o', 'in-d', 'f-o', 'f-d', 'edit-o', 'edit-d'].forEach(id => {
+            const dropdowns = ['in-o', 'in-d', 'f-o', 'f-d', 'edit-o', 'edit-d'];
+            dropdowns.forEach(id => {
                 const el = document.getElementById(id);
                 el.innerHTML = `<option value="">${id.includes('f-') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
                 LOCS.forEach(l => { el.innerHTML += `<option value="${l}">${l}</option>`; });
