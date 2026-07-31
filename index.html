@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - التحكم الكامل</title>
+    <title>ShareRide - النسخة الكاملة</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@
 
     <main class="max-w-md mx-auto p-4">
 
-        <!-- نموذج التعديل (تم إضافة المقاعد هنا) -->
+        <!-- نموذج التعديل -->
         <div id="global-edit-form" class="hidden edit-overlay text-right space-y-3">
             <h3 class="font-black text-center border-b border-amber-200 pb-2 mb-2 text-amber-800 italic">تعديل بيانات الرحلة</h3>
             <input type="hidden" id="edit-id">
@@ -69,7 +69,7 @@
             </div>
         </div>
 
-        <!-- الأقسام -->
+        <!-- البحث -->
         <div id="view-search" class="tab-content active">
             <div class="bg-white p-4 rounded-3xl mb-6 border shadow-sm text-center">
                 <div class="grid grid-cols-2 gap-2 mb-3">
@@ -81,6 +81,7 @@
             <div id="list-public"></div>
         </div>
 
+        <!-- النشر -->
         <div id="view-post" class="tab-content">
             <div class="bg-white p-5 rounded-[2.2rem] border shadow-sm">
                 <form id="postForm" onsubmit="apiPost(event)" class="space-y-4">
@@ -108,22 +109,24 @@
             </div>
         </div>
 
+        <!-- رحلاتي -->
         <div id="view-my" class="tab-content">
             <div class="bg-white p-6 rounded-3xl border-2 border-black mb-6 text-center shadow-sm">
                 <h2 class="font-black mb-3">إدارة رحلاتي 👤</h2>
                 <input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold border-gray-400">
-                <button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold">عرض رحلاتي الخاصة</button>
+                <button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold text-sm">عرض رحلاتي الخاصة</button>
             </div>
             <div id="list-mine"></div>
         </div>
 
+        <!-- الإدارة -->
         <div id="view-admin" class="tab-content text-center">
             <div id="admin-auth" class="bg-white p-8 rounded-2xl border shadow-sm">
                 <input type="password" id="admin-pass" placeholder="كلمة المرور" class="form-input text-center mb-4 border-2">
-                <button onclick="apiAdminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-bold font-black">دخول المدير</button>
+                <button onclick="apiAdminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-bold">دخول المدير</button>
             </div>
-            <div id="admin-panel" class="hidden">
-                <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm text-right">
+            <div id="admin-panel" class="hidden text-right">
+                <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm">
                     <input type="tel" id="admin-search-phone" placeholder="بحث برقم هاتف..." class="form-input font-bold">
                     <button onclick="apiAdminReload()" class="bg-[#00a884] text-white w-full mt-2 p-2 rounded-xl font-bold text-sm">بحث الآن</button>
                 </div>
@@ -138,7 +141,8 @@
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
         const sb = supabase.createClient(SB_URL, SB_KEY);
 
-        const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "عين شمس", "الهايكستب", "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
+        // قائمة المناطق المحدثة بإضافة المقطم
+        const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "المقطم", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "عين شمس", "الهايكستب", "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
 
         function uiTab(id) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -171,11 +175,11 @@
             if(o) q = q.eq('origin', o);
             if(d) q = q.eq('destination', d);
             const {data} = await q;
-            list.innerHTML = data && data.length ? data.map(t => card(t, 'public')).join('') : '<p class="text-center py-20 text-gray-400">لا توجد رحلات حالياً</p>';
+            list.innerHTML = data && data.length ? data.map(t => card(t, 'public')).join('') : '<p class="text-center py-20 text-gray-400 font-bold">لا توجد رحلات حالياً</p>';
         }
 
-        async function apiPost(e) {
-            e.preventDefault();
+        async function apiPost(event) {
+            event.preventDefault();
             const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
             const role = document.getElementById('in-role').value;
             const row = {
@@ -196,7 +200,7 @@
             const p = document.getElementById('my-phone').value;
             if(!p) return alert('أدخل رقمك');
             const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('origin', {ascending: true});
-            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5">لا توجد رحلات لهذا الرقم</p>';
+            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5 font-bold">لا توجد رحلات لهذا الرقم</p>';
         }
 
         function apiAdminLogin() {
@@ -261,7 +265,6 @@
             const isCap = t.user_role === 'captain';
             const isDone = t.status === 'completed';
             let btnUI = '';
-
             if(mode === 'public') {
                 btnUI = `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-2xl font-bold text-sm mt-3 shadow-md">تواصل واتساب 💬</a>`;
             } else {
@@ -282,7 +285,7 @@
                         </div>
                         <div class="text-[10px] text-gray-500 font-bold mb-2 italic">🕘 الذهاب: ${t.departure_time} ${t.return_time ? ' | عودة: '+t.return_time : ''}</div>
                         ${isCap ? `<div class="flex gap-2 mb-2"><span class="feature-badge">💺 ${t.seats_available} مقاعد</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون تكييف'}</span></div>` : ''}
-                        ${t.notes ? `<p class="text-[10px] bg-gray-50 p-2 rounded-lg italic text-gray-600 mb-2 border-r-2 border-gray-300 font-medium font-bold">"${t.notes}"</p>` : ''}
+                        ${t.notes ? `<p class="text-[10px] bg-gray-50 p-2 rounded-lg italic text-gray-600 mb-2 border-r-2 border-gray-300 font-bold font-medium">"${t.notes}"</p>` : ''}
                         ${isDone ? '<p class="text-[9px] text-red-500 font-bold mb-2">● هذه الرحلة مكتملة ومخفية عن الجمهور</p>' : ''}
                     </div>
                     ${btnUI}
