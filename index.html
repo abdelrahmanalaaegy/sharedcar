@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - المنصة الرسمية</title>
+    <title>ShareRide - لوحة الإدارة الاحترافية</title>
 
     <!-- إعدادات التطبيق (PWA) -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#00a884">
     <link rel="apple-touch-icon" href="logo.png">
     
-    <!-- تحميل المكتبات -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
@@ -22,33 +21,33 @@
         .nav-btn.active { color: #00a884; border-bottom: 4px solid #00a884; font-weight: 900; }
         .form-input { width: 100%; padding: 14px; border-radius: 15px; border: 1px solid #cbd5e1; outline: none; background: white; font-size: 14px; }
         
-        /* تصميم الكارت الاحترافي */
+        /* كارت الرحلة */
         .trip-card { background: white; border-radius: 25px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px; position: relative; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .main-info { flex: 1; min-width: 0; }
-        .side-info { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 75px; text-align: center; padding-top: 2px; }
+        .side-info { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 75px; text-align: center; }
         
         .role-badge { padding: 4px 10px; border-radius: 8px; font-size: 9px; font-weight: 900; color: white; width: 100%; }
-        .price-text { font-size: 10px; font-weight: 900; color: #00a884; line-height: 1.2; margin-top: 2px; }
+        .price-text { font-size: 10px; font-weight: 900; color: #00a884; line-height: 1.2; margin-top: 4px; }
         
-        .route-header { background: #cbd5e1; color: #1e293b; padding: 8px 15px; border-radius: 15px; font-size: 11px; font-weight: 900; margin: 20px 0 10px 0; display: block; text-align: center; }
         .btn-green { background: #00a884; color: white; border-radius: 18px; font-weight: bold; width: 100%; padding: 15px; transition: 0.2s; }
         .feature-badge { background: #f1f5f9; color: #475569; padding: 3px 10px; border-radius: 8px; font-size: 10px; font-weight: bold; }
         
-        /* شاشة التحميل */
+        /* الإحصائيات للأدمن - اللون الأحمر المطلوب */
+        .stat-box { background: #0b141a; color: white; padding: 15px; border-radius: 20px; text-align: center; border-bottom: 4px solid #00a884; }
+        .stat-red { background: #7f1d1d !important; color: white !important; border-bottom: 4px solid #f87171 !important; }
+        
         #loading-overlay { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: opacity 0.5s ease; }
         .pulse-text { animation: pulse-opacity 1.5s infinite; }
         @keyframes pulse-opacity { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        
         .edit-overlay { background: #fffbeb; border: 2px solid #f59e0b; padding: 20px; border-radius: 25px; margin-bottom: 20px; }
-        .content-fade { opacity: 0.4; filter: grayscale(1); }
         .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 8px; border-radius: 15px; border: 1px solid #cbd5e1; }
         .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 13px; flex: 1; text-align: center; border:none; }
+        .content-fade { opacity: 0.4; filter: grayscale(1); }
     </style>
 </head>
 <body>
 
-    <!-- شاشة التحميل -->
     <div id="loading-overlay">
         <h1 class="text-4xl font-black text-[#00a884] mb-2 italic">ShareRide</h1>
         <p class="text-gray-400 font-bold pulse-text">جاري تشغيل المحرك... 🚗</p>
@@ -85,14 +84,14 @@
             <div class="flex gap-2"><button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold">حفظ وتحديث ✅</button><button onclick="document.getElementById('global-edit-form').classList.add('hidden')" class="bg-gray-400 text-white p-3 rounded-xl font-bold">إلغاء</button></div>
         </div>
 
-        <!-- 1. البحث الفوري -->
+        <!-- 1. البحث -->
         <div id="view-search" class="tab-content active">
             <div class="bg-white p-4 rounded-3xl mb-6 border shadow-sm text-center">
                 <div class="grid grid-cols-2 gap-2 mb-2">
                     <select id="f-o" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100"></select>
                     <select id="f-d" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100"></select>
                 </div>
-                <select id="f-role" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100">
+                <select id="f-role" onchange="apiGetTrips()" class="form-input text-[11px] font-bold">
                     <option value="">كل الإعلانات (كباتن وركاب)</option>
                     <option value="captain">كباتن معاهم عربية 🚗</option>
                     <option value="passenger">ركاب بيدوروا على عربية 🙋‍♂️</option>
@@ -116,7 +115,7 @@
                         <div><label class="text-[10px] font-black text-gray-400 pr-1 block mb-1">ساعة عودة (اختياري) 🕒</label><div class="time-select-group"><select id="in-h2"><option value="">الساعة</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m2"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p2"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div></div>
                     </div>
                     <div id="cap-box" class="space-y-4 border-t pt-4">
-                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="سعر اليوم الواحد" class="form-input text-center"></div>
+                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="السعر لليوم" class="form-input text-center"></div>
                         <select id="in-ac" class="form-input text-xs font-bold"><option value="true">✅ السيارة مكيفة</option><option value="false">❌ بدون تكييف</option></select>
                     </div>
                     <textarea id="in-notes" placeholder="ملاحظات إضافية..." class="form-input h-20 mb-3 font-bold"></textarea>
@@ -127,15 +126,38 @@
         </div>
 
         <div id="view-my" class="tab-content text-center">
-            <div class="bg-white p-6 rounded-3xl border-2 border-black mb-6 shadow-sm"><h2 class="font-black mb-3 italic text-lg">إدارة رحلاتي 👤</h2><input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold border-gray-400"><button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold">عرض رحلاتي</button></div>
+            <div class="bg-white p-6 rounded-3xl border-2 border-black mb-6 shadow-sm"><h2 class="font-black mb-3 italic text-lg">إدارة رحلاتي 👤</h2><input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold border-gray-400"><button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold active:scale-95">عرض رحلاتي</button></div>
             <div id="list-mine"></div>
         </div>
 
-        <div id="view-admin" class="tab-content text-center">
-            <div id="admin-auth" class="bg-white p-8 rounded-2xl border shadow-sm"><input type="password" id="admin-pass" placeholder="كلمة المرور" class="form-input text-center mb-4 border-2 shadow-sm"><button onclick="apiAdminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-black">دخول المدير</button></div>
-            <div id="admin-panel" class="hidden text-right">
-                <div class="bg-black text-white p-4 rounded-2xl mb-4 text-center border-2 border-[#00a884]"><p class="text-[10px] opacity-70">إجمالي الزيارات</p><h2 id="visit-total" class="text-3xl font-black text-[#00a884]">0</h2></div>
-                <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm space-y-2"><input type="tel" id="admin-search-phone" oninput="apiAdminReload()" placeholder="بحث برقم هاتف..." class="form-input font-bold text-center"><select id="admin-search-origin" onchange="apiAdminReload()" class="form-input font-bold text-xs"></select></div>
+        <!-- 4. الإدارة -->
+        <div id="view-admin" class="tab-content">
+            <div id="admin-auth" class="bg-white p-8 rounded-2xl border shadow-sm text-center">
+                <input type="password" id="admin-pass" placeholder="كلمة المرور" class="form-input text-center mb-4 border-2">
+                <button onclick="apiAdminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-bold">دخول المدير</button>
+            </div>
+            <div id="admin-panel" class="hidden">
+                <!-- العدادات باللون الأحمر الجديد -->
+                <div class="grid grid-cols-1 gap-3 mb-6">
+                    <div class="stat-box">
+                        <p class="text-[10px] opacity-70">إجمالي زيارات الموقع</p>
+                        <h2 id="visit-total" class="text-3xl font-black text-[#00a884]">0</h2>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="stat-box stat-red">
+                            <p class="text-[10px] opacity-80 font-bold">رحلات الكباتن</p>
+                            <h2 id="count-cap" class="text-2xl font-black">0</h2>
+                        </div>
+                        <div class="stat-box stat-red">
+                            <p class="text-[10px] opacity-80 font-bold">طلبات الركاب</p>
+                            <h2 id="count-pas" class="text-2xl font-black">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm text-right space-y-2">
+                    <input type="tel" id="admin-search-phone" oninput="apiAdminReload()" placeholder="بحث برقم هاتف..." class="form-input font-bold text-center border-gray-300">
+                    <select id="admin-search-origin" onchange="apiAdminReload()" class="form-input font-bold text-xs border-gray-300"></select>
+                </div>
                 <div id="list-admin"></div>
             </div>
         </div>
@@ -149,11 +171,6 @@
         const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "المقطم", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "المطرية", "عين شمس", "الهايكستب", "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
         let allLocalTrips = [];
 
-        // تسجيل الموقع كتطبيق (PWA)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
-        }
-
         window.onload = function() {
             setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 2000);
             try {
@@ -165,6 +182,7 @@
         };
 
         async function trackVisit() {
+            if (localStorage.getItem('is_share_ride_admin') === 'true') return;
             try {
                 const { data } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
                 if(data) await sb.from('site_stats').update({ visit_count: data.visit_count + 1 }).eq('id', 1);
@@ -240,15 +258,24 @@
             if(!p) return alert('أدخل رقمك');
             const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('created_at', {ascending: false});
             if(data) allLocalTrips = (allLocalTrips || []).concat(data);
-            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5 font-black text-gray-400">لا توجد نتائج</p>';
+            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5 font-black text-gray-400">لا يوجد نتائج</p>';
         }
 
         async function apiAdminLogin() {
             if(document.getElementById('admin-pass').value === 'Malika2017') {
+                localStorage.setItem('is_share_ride_admin', 'true');
                 document.getElementById('admin-auth').style.display = 'none';
                 document.getElementById('admin-panel').classList.remove('hidden');
+                
                 const { data: stats } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
                 document.getElementById('visit-total').innerText = stats?.visit_count || 0;
+                
+                const { count: caps } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'captain');
+                const { count: pass } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'passenger');
+                
+                document.getElementById('count-cap').innerText = caps || 0;
+                document.getElementById('count-pas').innerText = pass || 0;
+
                 apiAdminReload();
             } else alert('خطأ');
         }
@@ -269,7 +296,7 @@
             if(act === 'del') await sb.from('trips').delete().eq('id', id);
             else if(act === 'done') await sb.from('trips').update({status: 'completed'}).eq('id', id);
             else if(act === 'active') await sb.from('trips').update({status: 'active'}).eq('id', id);
-            if(mode === 'admin') await apiAdminReload(); else await apiGetMyTrips();
+            if(mode === 'admin') await apiAdminLogin(); else await apiGetMyTrips();
             await apiGetTrips();
         }
 
@@ -309,7 +336,7 @@
             alert('تم التحديث بنجاح ✅');
             document.getElementById('global-edit-form').classList.add('hidden');
             apiGetTrips();
-            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
+            if(mode === 'admin') apiAdminLogin(); else apiGetMyTrips();
         }
 
         function card(t, mode) {
@@ -341,7 +368,7 @@
                         </div>
                     </div>
                     ${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200">" ${t.notes} "</p>` : ''}
-                    ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 mt-1 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center">📱 رقم الناشر: ${displayPhone}</p>` : ''}
+                    ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center">📱 رقم الناشر: ${displayPhone}</p>` : ''}
                     <div class="${isDone && mode !== 'admin' ? 'content-fade' : ''}">${btnUI}</div>
                 </div>`;
         }
