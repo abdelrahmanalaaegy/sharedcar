@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - النسخة المستقرة النهائية</title>
+    <title>ShareRide - النسخة المستقرة</title>
     
     <!-- تحميل المكتبات -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,23 +11,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; padding-bottom: 80px; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; padding-bottom: 90px; -webkit-tap-highlight-color: transparent; }
         .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .nav-btn.active { color: #00a884; border-bottom: 4px solid #00a884; font-weight: 900; }
-        .form-input { width: 100%; padding: 12px; border-radius: 15px; border: 1px solid #cbd5e1; outline: none; background: white; font-size: 14px; }
-        .trip-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; position: relative; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .form-input { width: 100%; padding: 14px; border-radius: 15px; border: 1px solid #cbd5e1; outline: none; background: white; font-size: 14px; }
+        .trip-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
         .role-badge { position: absolute; left: 12px; top: 12px; padding: 4px 10px; border-radius: 8px; font-size: 9px; font-weight: 900; color: white; }
-        .route-header { background: #e2e8f0; color: #475569; padding: 6px 15px; border-radius: 12px; font-size: 11px; font-weight: 800; margin: 20px 0 10px 0; display: inline-block; }
-        .btn-green { background: #00a884; color: white; border-radius: 15px; font-weight: bold; width: 100%; padding: 14px; }
-        .edit-overlay { background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .route-header { background: #cbd5e1; color: #1e293b; padding: 6px 15px; border-radius: 12px; font-size: 11px; font-weight: 900; margin: 25px 0 10px 0; display: inline-block; }
+        .btn-green { background: #00a884; color: white; border-radius: 15px; font-weight: bold; width: 100%; padding: 15px; }
         .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 8px; border-radius: 15px; border: 1px solid #cbd5e1; }
-        .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 13px; flex: 1; text-align: center; }
+        .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 13px; flex: 1; text-align: center; border:none; }
+        .content-fade { opacity: 0.4; filter: grayscale(1); }
         .feature-badge { background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; }
-        .content-fade { opacity: 0.5; filter: grayscale(0.8); }
+        .loading-screen { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
     </style>
 </head>
 <body>
+
+    <!-- شاشة تحميل لضمان جاهزية الموقع -->
+    <div id="loading-overlay" class="loading-screen">
+        <h1 class="text-2xl font-black text-[#00a884] mb-2 italic">ShareRide</h1>
+        <p class="text-gray-400 animate-pulse">جاري تشغيل المحرك... 🚗</p>
+    </div>
 
     <header class="bg-white shadow-sm sticky top-0 z-[100] p-4 text-center">
         <h1 class="text-xl font-black text-[#00a884] mb-4 italic text-2xl">ShareRide 🚗</h1>
@@ -41,12 +48,11 @@
 
     <main class="max-w-md mx-auto p-4">
 
-        <!-- نموذج التعديل (محمي) -->
-        <div id="global-edit-form" class="hidden edit-overlay text-right space-y-3">
-            <h3 class="font-black text-center text-amber-800 border-b border-amber-200 pb-2">📝 تعديل البيانات</h3>
+        <!-- نموذج التعديل -->
+        <div id="global-edit-form" class="hidden bg-amber-50 border-2 border-amber-500 p-5 rounded-[2rem] mb-6 space-y-3 shadow-2xl">
+            <h3 class="font-black text-center text-amber-800 italic border-b border-amber-200 pb-2">📝 تعديل الرحلة</h3>
             <input type="hidden" id="edit-id">
             <input type="hidden" id="edit-mode">
-            
             <div class="grid grid-cols-2 gap-2"><select id="edit-o" class="form-input text-xs font-bold"></select><select id="edit-d" class="form-input text-xs font-bold"></select></div>
             <div class="grid grid-cols-2 gap-2">
                 <input type="text" id="edit-t1" placeholder="وقت الذهاب" class="form-input text-xs font-bold">
@@ -57,15 +63,11 @@
                 <select id="edit-seats" class="form-input text-[10px] font-bold"><option value="1">1 مقعد</option><option value="2">2 مقعد</option><option value="3">3 مقاعد</option><option value="4">4 مقاعد</option></select>
                 <select id="edit-ac" class="form-input text-[10px] font-bold"><option value="true">مكيفة</option><option value="false">بدون</option></select>
             </div>
-            <textarea id="edit-notes" placeholder="الملاحظات" class="form-input h-16 text-xs font-bold"></textarea>
-            
-            <div class="flex gap-2">
-                <button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold">حفظ الآن</button>
-                <button onclick="document.getElementById('global-edit-form').classList.add('hidden')" class="bg-gray-400 text-white p-3 rounded-xl font-bold">إلغاء</button>
-            </div>
+            <textarea id="edit-notes" class="form-input h-16 text-xs font-bold" placeholder="الملاحظات"></textarea>
+            <div class="flex gap-2"><button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold">حفظ</button><button onclick="document.getElementById('global-edit-form').classList.add('hidden')" class="bg-gray-400 text-white p-3 rounded-xl font-bold">إلغاء</button></div>
         </div>
 
-        <!-- 1. البحث -->
+        <!-- الأقسام -->
         <div id="view-search" class="tab-content active">
             <div class="bg-white p-4 rounded-3xl mb-6 border shadow-sm text-center">
                 <div class="grid grid-cols-2 gap-2 mb-3"><select id="f-o" class="form-input text-xs font-bold"></select><select id="f-d" class="form-input text-xs font-bold"></select></div>
@@ -74,7 +76,6 @@
             <div id="list-public"></div>
         </div>
 
-        <!-- 2. النشر -->
         <div id="view-post" class="tab-content">
             <div class="bg-white p-5 rounded-[2.2rem] border shadow-sm">
                 <form id="postForm" onsubmit="apiPost(event)" class="space-y-4">
@@ -84,16 +85,18 @@
                     </div>
                     <input type="hidden" id="in-role" value="captain">
                     <div class="grid grid-cols-2 gap-3 font-bold"><select id="in-o" required class="form-input text-xs"></select><select id="in-d" required class="form-input text-xs"></select></div>
-                    <div class="space-y-4 border-t pt-4">
-                        <div class="time-select-group"><select id="in-h1" required><option value="">ساعة الانطلاق</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p1"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div>
-                        <div class="time-select-group"><select id="in-h2"><option value="">ساعة العودة (اختياري)</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m2"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p2"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div>
+                    <div class="space-y-4 border-t pt-4 text-right">
+                        <label class="text-[10px] font-black text-[#00a884] pr-1">موعد الانطلاق 🕒</label>
+                        <div class="time-select-group"><select id="in-h1" required><option value="">الساعة</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p1"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div>
+                        <label class="text-[10px] font-black text-gray-400 pr-1">موعد العودة (اختياري) 🕒</label>
+                        <div class="time-select-group"><select id="in-h2"><option value="">الساعة</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m2"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p2"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div>
                     </div>
                     <div id="cap-box" class="space-y-4 border-t pt-4">
-                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="السعر لليوم (اختياري)" class="form-input text-center"></div>
+                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="السعر اليومي (اختياري)" class="form-input text-center"></div>
                     </div>
-                    <textarea id="in-notes" placeholder="ملاحظات إضافية..." class="form-input h-20 mb-3 font-bold"></textarea>
-                    <input type="tel" id="in-phone" required placeholder="رقم واتسابك (01xxxxxxxxx)" class="form-input text-center font-black border-2 border-[#00a884]">
-                    <button type="submit" id="btn-pub" class="btn-green p-4 text-lg shadow-lg font-black">نشر الآن 🚀</button>
+                    <textarea id="in-notes" placeholder="ملاحظات إضافية (مثل: شنط، تدخين..)" class="form-input h-20 mb-3 font-bold"></textarea>
+                    <input type="tel" id="in-phone" required placeholder="رقم تليفونك (01xxxxxxxxx)" class="form-input text-center font-black border-2 border-[#00a884]">
+                    <button type="submit" id="btn-pub" class="btn-green p-4 text-lg shadow-lg font-black">نشر الرحلة 🚀</button>
                 </form>
             </div>
         </div>
@@ -104,12 +107,9 @@
         </div>
 
         <div id="view-admin" class="tab-content text-center">
-            <div id="admin-auth" class="bg-white p-8 rounded-2xl border shadow-sm"><input type="password" id="admin-pass" placeholder="كلمة المرور" class="form-input text-center mb-4 border-2 shadow-sm"><button onclick="apiAdminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-black">دخول المدير</button></div>
+            <div id="admin-auth" class="bg-white p-8 rounded-2xl border shadow-sm"><input type="password" id="admin-pass" placeholder="كلمة المرور" class="form-input text-center mb-4 border-2"><button onclick="apiAdminLogin()" class="w-full bg-black text-white p-3 rounded-xl font-black">دخول المدير</button></div>
             <div id="admin-panel" class="hidden">
-                <div class="bg-black text-white p-4 rounded-2xl mb-4 text-center border-2 border-[#00a884]">
-                    <p class="text-[10px] opacity-70">إجمالي الزيارات</p>
-                    <h2 id="visit-total" class="text-3xl font-black text-[#00a884]">0</h2>
-                </div>
+                <div class="bg-black text-white p-4 rounded-2xl mb-4 text-center border-2 border-[#00a884]"><p class="text-[10px] opacity-70 font-black">إجمالي زيارات الموقع</p><h2 id="visit-total" class="text-3xl font-black text-[#00a884]">0</h2></div>
                 <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm text-right"><input type="tel" id="admin-search-phone" placeholder="بحث برقم هاتف..." class="form-input font-bold"><button onclick="apiAdminReload()" class="bg-[#00a884] text-white w-full mt-2 p-2 rounded-xl font-bold text-sm">بحث الآن</button></div>
                 <div id="list-admin"></div>
             </div>
@@ -123,19 +123,24 @@
         let sb;
         const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "المقطم", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "المطرية", "عين شمس", "الهايكستب", "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
         
-        let allCurrentTrips = [];
+        let allLocalTrips = [];
 
-        // تشغيل التطبيق بأمان
-        function initApp() {
+        // الانتظار حتى تحميل كل شيء
+        window.onload = function() {
             try {
+                if (typeof supabase === 'undefined') {
+                    document.getElementById('loading-overlay').innerHTML = "خطأ: فشل الاتصال بالمكتبات، جرب تحديث الصفحة.";
+                    return;
+                }
                 sb = supabase.createClient(SB_URL, SB_KEY);
                 fillDropdowns();
                 trackVisit();
                 apiGetTrips();
+                document.getElementById('loading-overlay').style.display = 'none';
             } catch (e) {
-                alert("مشكلة في تحميل الموقع، تأكد من اتصال الإنترنت");
+                alert("حدث خطأ تقني: " + e.message);
             }
-        }
+        };
 
         async function trackVisit() {
             try {
@@ -161,18 +166,18 @@
 
         async function apiGetTrips() {
             const list = document.getElementById('list-public');
-            list.innerHTML = '<p class="text-center py-20 text-gray-400 font-bold">جاري تحديث الرحلات...</p>';
+            list.innerHTML = '<p class="text-center py-20 text-gray-400 font-black">جاري تحديث الرحلات...</p>';
             let q = sb.from('trips').select('*').eq('status', 'active').order('origin', {ascending: true}).order('destination', {ascending: true});
             const o = document.getElementById('f-o').value;
             const d = document.getElementById('f-d').value;
             if(o) q = q.eq('origin', o);
             if(d) q = q.eq('destination', d);
             const {data} = await q;
-            allCurrentTrips = data || [];
+            allLocalTrips = data || [];
             let html = ''; let lastRoute = "";
             if(data && data.length) {
                 data.forEach(t => {
-                    let route = `${t.origin} ➡️ ${t.destination}`;
+                    let route = `${t.origin} ⬅️ ${t.destination}`;
                     if(route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${route}</div>`; lastRoute = route; }
                     html += card(t, 'public');
                 });
@@ -184,7 +189,7 @@
             event.preventDefault();
             const h1 = document.getElementById('in-h1').value;
             if(!h1) return alert('برجاء اختيار ساعة الانطلاق');
-            const btn = document.getElementById('btn-pub'); btn.disabled = true;
+            const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
 
             const payload = {
                 user_role: document.getElementById('in-role').value,
@@ -196,22 +201,23 @@
                 has_ac: document.getElementById('in-ac').value === "true",
                 price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active'
             };
-            await sb.from('trips').insert([payload]);
-            alert('تم النشر بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search');
-            btn.disabled = false;
+            const { error } = await sb.from('trips').insert([payload]);
+            if(!error) { alert('تم النشر بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search'); }
+            else { alert("خطأ في النشر، تأكد من الاتصال"); }
+            btn.disabled = false; btn.innerText = "نشر الرحلة الآن 🚀";
         }
 
         async function apiGetMyTrips() {
             const p = document.getElementById('my-phone').value;
             if(!p) return alert('أدخل رقمك');
             const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('created_at', {ascending: false});
-            allCurrentTrips = allCurrentTrips.concat(data || []);
-            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5">لا توجد نتائج</p>';
+            allLocalTrips = (allLocalTrips || []).concat(data || []);
+            document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5 font-black text-gray-400">لا توجد نتائج</p>';
         }
 
         async function apiAdminLogin() {
             if(document.getElementById('admin-pass').value === 'Malika2017') {
-                document.getElementById('admin-auth').classList.add('hidden');
+                document.getElementById('admin-auth').style.display = 'none';
                 document.getElementById('admin-panel').classList.remove('hidden');
                 const { data: stats } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
                 document.getElementById('visit-total').innerText = stats?.visit_count || 0;
@@ -224,8 +230,8 @@
             const searchPhone = document.getElementById('admin-search-phone').value;
             if(searchPhone) q = q.ilike('whatsapp_number', '%'+searchPhone+'%');
             const {data} = await q;
-            allCurrentTrips = data || [];
-            document.getElementById('list-admin').innerHTML = data.map(t => card(t, 'admin')).join('');
+            allLocalTrips = data || [];
+            document.getElementById('list-admin').innerHTML = (data || []).map(t => card(t, 'admin')).join('');
         }
 
         async function apiAction(id, act, mode) {
@@ -233,13 +239,13 @@
             if(act === 'del') await sb.from('trips').delete().eq('id', id);
             else if(act === 'done') await sb.from('trips').update({status: 'completed'}).eq('id', id);
             else if(act === 'active') await sb.from('trips').update({status: 'active'}).eq('id', id);
-            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
-            apiGetTrips();
+            if(mode === 'admin') await apiAdminReload(); else await apiGetMyTrips();
+            await apiGetTrips();
         }
 
         function openEdit(id, mode) {
-            const t = allCurrentTrips.find(trip => trip.id === id);
-            if(!t) return alert("خطأ في جلب البيانات، جرب تحديث النتائج");
+            const t = allLocalTrips.find(trip => trip.id === id);
+            if(!t) return alert("البيانات غير متوفرة حالياً، حدث الصفحة.");
             document.getElementById('global-edit-form').classList.remove('hidden');
             document.getElementById('edit-id').value = t.id;
             document.getElementById('edit-mode').value = mode;
@@ -265,9 +271,9 @@
                 notes: document.getElementById('edit-notes').value
             };
             await sb.from('trips').update(payload).eq('id', id);
-            alert('تم الحفظ بنجاح ✅');
+            alert('تم الحفظ ✅');
             document.getElementById('global-edit-form').classList.add('hidden');
-            apiGetTrips();
+            await apiGetTrips();
             if(document.getElementById('edit-mode').value === 'admin') apiAdminReload(); else apiGetMyTrips();
         }
 
@@ -276,7 +282,6 @@
             const isDone = t.status === 'completed';
             let btnUI = '';
             if(mode === 'public') {
-                btnUI = `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-2xl font-bold text-sm mt-3 shadow-md">تواصل واتساب 💬</a>`;
+                btnUI = `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-4 rounded-2xl font-black text-sm mt-3 shadow-md">تواصل واتساب 💬</a>`;
             } else {
-                btnUI = `<div class="grid grid-cols-3 gap-2 mt-4">
-                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-bold">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-
+                btnUI = `<div class=
