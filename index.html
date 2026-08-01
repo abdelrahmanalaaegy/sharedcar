@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - نسخة مستقرة</title>
+    <title>ShareRide - النسخة المستقرة النهائية</title>
+    
+    <!-- تحميل المكتبات -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+
     <style>
         body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; padding-bottom: 80px; }
         .tab-content { display: none; }
@@ -18,9 +21,9 @@
         .route-header { background: #e2e8f0; color: #475569; padding: 6px 15px; border-radius: 12px; font-size: 11px; font-weight: 800; margin: 20px 0 10px 0; display: inline-block; }
         .btn-green { background: #00a884; color: white; border-radius: 15px; font-weight: bold; width: 100%; padding: 14px; }
         .edit-overlay { background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .feature-badge { background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; }
         .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 8px; border-radius: 15px; border: 1px solid #cbd5e1; }
         .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 13px; flex: 1; text-align: center; }
+        .feature-badge { background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; }
         .content-fade { opacity: 0.5; filter: grayscale(0.8); }
     </style>
 </head>
@@ -38,19 +41,16 @@
 
     <main class="max-w-md mx-auto p-4">
 
-        <!-- نموذج التعديل (تم إصلاحه بالكامل) -->
+        <!-- نموذج التعديل (محمي) -->
         <div id="global-edit-form" class="hidden edit-overlay text-right space-y-3">
-            <h3 class="font-black text-center text-amber-800 italic border-b border-amber-200 pb-2">📝 تعديل بيانات الرحلة</h3>
+            <h3 class="font-black text-center text-amber-800 border-b border-amber-200 pb-2">📝 تعديل البيانات</h3>
             <input type="hidden" id="edit-id">
             <input type="hidden" id="edit-mode">
             
-            <div class="grid grid-cols-2 gap-2 font-bold">
-                <select id="edit-o" class="form-input text-xs"></select>
-                <select id="edit-d" class="form-input text-xs"></select>
-            </div>
+            <div class="grid grid-cols-2 gap-2"><select id="edit-o" class="form-input text-xs font-bold"></select><select id="edit-d" class="form-input text-xs font-bold"></select></div>
             <div class="grid grid-cols-2 gap-2">
-                <div><label class="text-[9px] font-bold text-amber-600 mr-2">وقت الذهاب</label><input type="text" id="edit-t1" class="form-input text-xs font-bold"></div>
-                <div><label class="text-[9px] font-bold text-amber-600 mr-2">وقت العودة</label><input type="text" id="edit-t2" class="form-input text-xs font-bold"></div>
+                <input type="text" id="edit-t1" placeholder="وقت الذهاب" class="form-input text-xs font-bold">
+                <input type="text" id="edit-t2" placeholder="وقت العودة" class="form-input text-xs font-bold">
             </div>
             <div class="grid grid-cols-3 gap-2">
                 <input type="text" id="edit-price" placeholder="السعر" class="form-input text-[10px] font-bold">
@@ -59,21 +59,22 @@
             </div>
             <textarea id="edit-notes" placeholder="الملاحظات" class="form-input h-16 text-xs font-bold"></textarea>
             
-            <div class="flex gap-2 pt-2">
-                <button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold shadow-md active:scale-95 transition-all">حفظ التغييرات</button>
+            <div class="flex gap-2">
+                <button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold">حفظ الآن</button>
                 <button onclick="document.getElementById('global-edit-form').classList.add('hidden')" class="bg-gray-400 text-white p-3 rounded-xl font-bold">إلغاء</button>
             </div>
         </div>
 
-        <!-- الأقسام -->
+        <!-- 1. البحث -->
         <div id="view-search" class="tab-content active">
             <div class="bg-white p-4 rounded-3xl mb-6 border shadow-sm text-center">
                 <div class="grid grid-cols-2 gap-2 mb-3"><select id="f-o" class="form-input text-xs font-bold"></select><select id="f-d" class="form-input text-xs font-bold"></select></div>
-                <button onclick="apiGetTrips()" class="btn-green font-black shadow-md">تحديث النتائج 🔄</button>
+                <button onclick="apiGetTrips()" class="btn-green font-black">تحديث النتائج 🔄</button>
             </div>
             <div id="list-public"></div>
         </div>
 
+        <!-- 2. النشر -->
         <div id="view-post" class="tab-content">
             <div class="bg-white p-5 rounded-[2.2rem] border shadow-sm">
                 <form id="postForm" onsubmit="apiPost(event)" class="space-y-4">
@@ -98,7 +99,7 @@
         </div>
 
         <div id="view-my" class="tab-content text-center">
-            <div class="bg-white p-6 rounded-3xl border-2 border-black mb-6 shadow-sm"><h2 class="font-black mb-3 italic">إدارة رحلاتي 👤</h2><input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold border-gray-400"><button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold">عرض رحلاتي</button></div>
+            <div class="bg-white p-6 rounded-3xl border-2 border-black mb-6 shadow-sm"><h2 class="font-black mb-3">إدارة رحلاتي 👤</h2><input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-3 font-bold border-gray-400"><button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-3 rounded-xl font-bold">عرض رحلاتي</button></div>
             <div id="list-mine"></div>
         </div>
 
@@ -119,10 +120,22 @@
     <script>
         const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
-        const sb = supabase.createClient(SB_URL, SB_KEY);
+        let sb;
         const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "المقطم", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "المطرية", "عين شمس", "الهايكستب", "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
         
-        let allCurrentTrips = []; // تخزين مؤقت للبيانات لمنع مشاكل التعديل
+        let allCurrentTrips = [];
+
+        // تشغيل التطبيق بأمان
+        function initApp() {
+            try {
+                sb = supabase.createClient(SB_URL, SB_KEY);
+                fillDropdowns();
+                trackVisit();
+                apiGetTrips();
+            } catch (e) {
+                alert("مشكلة في تحميل الموقع، تأكد من اتصال الإنترنت");
+            }
+        }
 
         async function trackVisit() {
             try {
@@ -146,13 +159,6 @@
             document.getElementById('role-pas').className = r === 'passenger' ? "flex-1 py-2 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-xs text-gray-500";
         }
 
-        function t12(t) {
-            if(!t) return null;
-            let [h, m] = t.split(':'); h = parseInt(h);
-            const s = h >= 12 ? 'مساءً' : 'صباحاً'; h = h % 12 || 12;
-            return `${h}:${m} ${s}`;
-        }
-
         async function apiGetTrips() {
             const list = document.getElementById('list-public');
             list.innerHTML = '<p class="text-center py-20 text-gray-400 font-bold">جاري تحديث الرحلات...</p>';
@@ -162,9 +168,9 @@
             if(o) q = q.eq('origin', o);
             if(d) q = q.eq('destination', d);
             const {data} = await q;
-            allCurrentTrips = data || []; // حفظ البيانات للتعديل
+            allCurrentTrips = data || [];
             let html = ''; let lastRoute = "";
-            if(data) {
+            if(data && data.length) {
                 data.forEach(t => {
                     let route = `${t.origin} ➡️ ${t.destination}`;
                     if(route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${route}</div>`; lastRoute = route; }
@@ -199,7 +205,7 @@
             const p = document.getElementById('my-phone').value;
             if(!p) return alert('أدخل رقمك');
             const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).order('created_at', {ascending: false});
-            allCurrentTrips = data || []; 
+            allCurrentTrips = allCurrentTrips.concat(data || []);
             document.getElementById('list-mine').innerHTML = data && data.length ? data.map(t => card(t, 'my')).join('') : '<p class="text-center p-5">لا توجد نتائج</p>';
         }
 
@@ -231,11 +237,9 @@
             apiGetTrips();
         }
 
-        // دالة التعديل المُصلحة: تبحث في المصفوفة المحلية بدلاً من تمرير JSON معقد
         function openEdit(id, mode) {
             const t = allCurrentTrips.find(trip => trip.id === id);
-            if(!t) return alert("خطأ في العثور على البيانات");
-
+            if(!t) return alert("خطأ في جلب البيانات، جرب تحديث النتائج");
             document.getElementById('global-edit-form').classList.remove('hidden');
             document.getElementById('edit-id').value = t.id;
             document.getElementById('edit-mode').value = mode;
@@ -245,4 +249,34 @@
             document.getElementById('edit-t2').value = t.return_time || '';
             document.getElementById('edit-price').value = t.price_per_seat.replace(' ج.م', '');
             document.getElementById('edit-seats').value = t.seats_available;
-            document
+            document.getElementById('edit-ac').value = t.has_ac.toString();
+            document.getElementById('edit-notes').value = t.notes || '';
+            window.scrollTo(0, 0);
+        }
+
+        async function saveEdit() {
+            const id = document.getElementById('edit-id').value;
+            const payload = {
+                origin: document.getElementById('edit-o').value, destination: document.getElementById('edit-d').value,
+                departure_time: document.getElementById('edit-t1').value, return_time: document.getElementById('edit-t2').value,
+                price_per_seat: document.getElementById('edit-price').value ? document.getElementById('edit-price').value + " ج.م" : "",
+                seats_available: parseInt(document.getElementById('edit-seats').value),
+                has_ac: document.getElementById('edit-ac').value === "true",
+                notes: document.getElementById('edit-notes').value
+            };
+            await sb.from('trips').update(payload).eq('id', id);
+            alert('تم الحفظ بنجاح ✅');
+            document.getElementById('global-edit-form').classList.add('hidden');
+            apiGetTrips();
+            if(document.getElementById('edit-mode').value === 'admin') apiAdminReload(); else apiGetMyTrips();
+        }
+
+        function card(t, mode) {
+            const isCap = t.user_role === 'captain';
+            const isDone = t.status === 'completed';
+            let btnUI = '';
+            if(mode === 'public') {
+                btnUI = `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="block text-center bg-[#25D366] text-white py-3 rounded-2xl font-bold text-sm mt-3 shadow-md">تواصل واتساب 💬</a>`;
+            } else {
+                btnUI = `<div class="grid grid-cols-3 gap-2 mt-4">
+                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-bold">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-
