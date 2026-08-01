@@ -1,36 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
 
-:root {
-    --primary: #00A884;
-    --primary-light: rgba(0, 168, 132, 0.1);
-    --secondary: #128C7E;
-    --danger: #ef4444;
-}
+:root { --primary: #00A884; }
 
-body {
-    font-family: 'Tajawal', sans-serif;
-    background-color: #f8fafc;
-    direction: rtl;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-}
+body { font-family: 'Tajawal', sans-serif; }
 
-/* بطاقة الرحلة المطورة */
 .trip-card {
-    background: white;
-    border-radius: 28px;
-    padding: 20px;
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
+    transition: transform 0.2s ease;
+    border: 1px solid #f1f5f9;
 }
 
-.trip-card:active { transform: scale(0.97); }
+.trip-card:active { transform: scale(0.98); }
 
 .nav-btn.active {
     color: var(--primary);
-    font-weight: 900;
     position: relative;
 }
 
@@ -45,27 +27,25 @@ body {
     border-radius: 10px;
 }
 
+.price-text {
+    background: rgba(0, 168, 132, 0.05);
+    padding: 2px 8px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
 .stat-box {
     background: #0b141a;
     color: white;
     padding: 15px;
-    border-radius: 24px;
+    border-radius: 20px;
     text-align: center;
     border-bottom: 4px solid var(--primary);
 }
 
-.btn-primary {
-    background: var(--primary);
-    color: white;
-    font-weight: 900;
-    border-radius: 20px;
-    padding: 16px;
-    box-shadow: 0 10px 15px -3px rgba(0, 168, 132, 0.2);
+.stat-red {
+    background: #7f1d1d !important;
+    border-bottom: 4px solid #ef4444 !important;
 }
 
-.badge {
-    padding: 4px 12px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 900;
-}
+.content-fade { opacity: 0.3; filter: grayscale(1); }
