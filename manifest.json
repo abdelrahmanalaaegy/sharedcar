@@ -1,0 +1,16 @@
+{
+  "name": "ShareRide - تشارك الرحلات",
+  "short_name": "ShareRide",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00a884",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
