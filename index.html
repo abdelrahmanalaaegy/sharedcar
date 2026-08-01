@@ -3,35 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - النسخة النهائية المصلحة</title>
+    <title>ShareRide - المنصة الرسمية</title>
+
+    <!-- إعدادات التطبيق (PWA) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00a884">
+    <link rel="apple-touch-icon" href="logo.png">
     
+    <!-- تحميل المكتبات -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; padding-bottom: 90px; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; padding-bottom: 90px; -webkit-tap-highlight-color: transparent; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .nav-btn.active { color: #00a884; border-bottom: 4px solid #00a884; font-weight: 900; }
         .form-input { width: 100%; padding: 14px; border-radius: 15px; border: 1px solid #cbd5e1; outline: none; background: white; font-size: 14px; }
         
-        /* تصميم الكارت المصلح لمنع التداخل */
-        .trip-card { background: white; border-radius: 25px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px; }
+        /* تصميم الكارت الاحترافي */
+        .trip-card { background: white; border-radius: 25px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px; position: relative; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-        .main-info { flex: 1; min-width: 0; } /* يضمن عدم خروج النص عن المساحة */
-        .side-info { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 75px; text-align: center; }
+        .main-info { flex: 1; min-width: 0; }
+        .side-info { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 75px; text-align: center; padding-top: 2px; }
         
         .role-badge { padding: 4px 10px; border-radius: 8px; font-size: 9px; font-weight: 900; color: white; width: 100%; }
-        .price-text { font-size: 10px; font-weight: 900; color: #00a884; line-height: 1.2; word-break: break-word; }
+        .price-text { font-size: 10px; font-weight: 900; color: #00a884; line-height: 1.2; margin-top: 2px; }
         
         .route-header { background: #cbd5e1; color: #1e293b; padding: 8px 15px; border-radius: 15px; font-size: 11px; font-weight: 900; margin: 20px 0 10px 0; display: block; text-align: center; }
         .btn-green { background: #00a884; color: white; border-radius: 18px; font-weight: bold; width: 100%; padding: 15px; transition: 0.2s; }
         .feature-badge { background: #f1f5f9; color: #475569; padding: 3px 10px; border-radius: 8px; font-size: 10px; font-weight: bold; }
         
-        #loading-overlay { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        /* شاشة التحميل */
+        #loading-overlay { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: opacity 0.5s ease; }
         .pulse-text { animation: pulse-opacity 1.5s infinite; }
         @keyframes pulse-opacity { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
         .edit-overlay { background: #fffbeb; border: 2px solid #f59e0b; padding: 20px; border-radius: 25px; margin-bottom: 20px; }
         .content-fade { opacity: 0.4; filter: grayscale(1); }
         .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 8px; border-radius: 15px; border: 1px solid #cbd5e1; }
@@ -40,6 +48,7 @@
 </head>
 <body>
 
+    <!-- شاشة التحميل -->
     <div id="loading-overlay">
         <h1 class="text-4xl font-black text-[#00a884] mb-2 italic">ShareRide</h1>
         <p class="text-gray-400 font-bold pulse-text">جاري تشغيل المحرك... 🚗</p>
@@ -47,11 +56,11 @@
 
     <header class="bg-white shadow-sm sticky top-0 z-[100] p-4 text-center">
         <h1 class="text-xl font-black text-[#00a884] mb-4 italic text-2xl">ShareRide 🚗</h1>
-        <div class="flex justify-around text-[10px] font-bold gap-2">
-            <button onclick="uiTab('search')" id="nav-search" class="nav-btn pb-2 active">🔍 البحث</button>
-            <button onclick="uiTab('post')" id="nav-post" class="nav-btn pb-2 text-gray-400">➕ انشر</button>
-            <button onclick="uiTab('my')" id="nav-my" class="nav-btn pb-2 text-gray-400">👤 رحلاتي</button>
-            <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn pb-2 text-gray-400">⚙️ الإدارة</button>
+        <div class="flex justify-around text-[10px] font-bold gap-2 overflow-x-auto">
+            <button onclick="uiTab('search')" id="nav-search" class="nav-btn pb-2 active whitespace-nowrap">🔍 البحث</button>
+            <button onclick="uiTab('post')" id="nav-post" class="nav-btn pb-2 text-gray-400 whitespace-nowrap">➕ انشر</button>
+            <button onclick="uiTab('my')" id="nav-my" class="nav-btn pb-2 text-gray-400 whitespace-nowrap">👤 رحلاتي</button>
+            <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn pb-2 text-gray-400 whitespace-nowrap">⚙️ الإدارة</button>
         </div>
     </header>
 
@@ -76,14 +85,14 @@
             <div class="flex gap-2"><button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold">حفظ وتحديث ✅</button><button onclick="document.getElementById('global-edit-form').classList.add('hidden')" class="bg-gray-400 text-white p-3 rounded-xl font-bold">إلغاء</button></div>
         </div>
 
-        <!-- البحث -->
+        <!-- 1. البحث الفوري -->
         <div id="view-search" class="tab-content active">
             <div class="bg-white p-4 rounded-3xl mb-6 border shadow-sm text-center">
                 <div class="grid grid-cols-2 gap-2 mb-2">
                     <select id="f-o" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100"></select>
                     <select id="f-d" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100"></select>
                 </div>
-                <select id="f-role" onchange="apiGetTrips()" class="form-input text-[11px] font-bold">
+                <select id="f-role" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100">
                     <option value="">كل الإعلانات (كباتن وركاب)</option>
                     <option value="captain">كباتن معاهم عربية 🚗</option>
                     <option value="passenger">ركاب بيدوروا على عربية 🙋‍♂️</option>
@@ -92,7 +101,7 @@
             <div id="list-public"></div>
         </div>
 
-        <!-- النشر -->
+        <!-- 2. النشر -->
         <div id="view-post" class="tab-content">
             <div class="bg-white p-5 rounded-[2.2rem] border shadow-sm">
                 <form id="postForm" onsubmit="apiPost(event)" class="space-y-4">
@@ -103,17 +112,11 @@
                     <input type="hidden" id="in-role" value="captain">
                     <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-o" required class="form-input"></select><select id="in-d" required class="form-input"></select></div>
                     <div class="space-y-4 border-t pt-4">
-                        <div>
-                            <label class="text-[10px] font-black text-[#00a884] pr-1 block mb-1">ساعة ذهاب 🕒</label>
-                            <div class="time-select-group"><select id="in-h1"><option value="">الساعة</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p1"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-gray-400 pr-1 block mb-1">ساعة عودة (اختياري) 🕒</label>
-                            <div class="time-select-group"><select id="in-h2"><option value="">الساعة</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m2"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p2"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div>
-                        </div>
+                        <div><label class="text-[10px] font-black text-[#00a884] pr-1 block mb-1">ساعة ذهاب 🕒</label><div class="time-select-group"><select id="in-h1"><option value="">الساعة</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p1"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div></div>
+                        <div><label class="text-[10px] font-black text-gray-400 pr-1 block mb-1">ساعة عودة (اختياري) 🕒</label><div class="time-select-group"><select id="in-h2"><option value="">الساعة</option><option value="12">12</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option></select><span>:</span><select id="in-m2"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select><select id="in-p2"><option value="صباحاً">صباحاً</option><option value="مساءً">مساءً</option></select></div></div>
                     </div>
                     <div id="cap-box" class="space-y-4 border-t pt-4">
-                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="سعر اليوم" class="form-input text-center"></div>
+                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="سعر اليوم الواحد" class="form-input text-center"></div>
                         <select id="in-ac" class="form-input text-xs font-bold"><option value="true">✅ السيارة مكيفة</option><option value="false">❌ بدون تكييف</option></select>
                     </div>
                     <textarea id="in-notes" placeholder="ملاحظات إضافية..." class="form-input h-20 mb-3 font-bold"></textarea>
@@ -145,6 +148,11 @@
         let sb;
         const LOCS = ["أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "المعادي", "المقطم", "حلوان", "المهندسين", "وسط البلد ومحيطها", "شبرا مصر", "شبرا الخيمة", "المرج", "المرج الجديدة", "المطرية", "عين شمس", "الهايكستب", "جسر السويس", "مدينة نصر", "مصر الجديدة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "العاصمة الإدارية"];
         let allLocalTrips = [];
+
+        // تسجيل الموقع كتطبيق (PWA)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+        }
 
         window.onload = function() {
             setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 2000);
@@ -181,7 +189,7 @@
 
         async function apiGetTrips() {
             const list = document.getElementById('list-public');
-            list.innerHTML = '<p class="text-center py-20 text-gray-400 font-black">جاري جلب الرحلات...</p>';
+            list.innerHTML = '<p class="text-center py-20 text-gray-400 font-black">جاري البحث...</p>';
             const o = document.getElementById('f-o').value;
             const d = document.getElementById('f-d').value;
             const role = document.getElementById('f-role').value;
@@ -201,7 +209,7 @@
                     html += card(t, 'public');
                 });
             }
-            list.innerHTML = html || '<p class="text-center py-20 text-gray-400 font-black">لا توجد رحلات حالياً</p>';
+            list.innerHTML = html || '<p class="text-center py-20 text-gray-400 font-black text-sm italic">لا توجد رحلات مطابقة</p>';
         }
 
         async function apiPost(event) {
@@ -309,8 +317,8 @@
             const isDone = t.status === 'completed';
             let btnUI = mode === 'public' ? 
                 `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="btn-green block text-center shadow-md py-4 text-sm font-black">💬 تواصل واتساب</a>` :
-                `<div class="grid grid-cols-3 gap-2 mt-2">
-                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتملت</button>`}
+                `<div class="grid grid-cols-3 gap-2 mt-4">
+                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}
                     <button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button>
                     <button onclick="apiAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button>
                 </div>`;
@@ -333,7 +341,7 @@
                         </div>
                     </div>
                     ${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200">" ${t.notes} "</p>` : ''}
-                    ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center">📱 رقم الناشر: ${displayPhone}</p>` : ''}
+                    ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 mt-1 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center">📱 رقم الناشر: ${displayPhone}</p>` : ''}
                     <div class="${isDone && mode !== 'admin' ? 'content-fade' : ''}">${btnUI}</div>
                 </div>`;
         }
