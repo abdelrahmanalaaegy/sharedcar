@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareRide - المنصة الرسمية</title>
+    <title>ShareRide - نسخة التحكم الاحترافية</title>
 
     <!-- إعدادات التطبيق (PWA) -->
     <link rel="manifest" href="manifest.json">
@@ -21,6 +21,7 @@
         .nav-btn.active { color: #00a884; border-bottom: 4px solid #00a884; font-weight: 900; }
         .form-input { width: 100%; padding: 14px; border-radius: 15px; border: 1px solid #cbd5e1; outline: none; background: white; font-size: 14px; }
         
+        /* كارت الرحلة */
         .trip-card { background: white; border-radius: 25px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px; position: relative; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .main-info { flex: 1; min-width: 0; }
@@ -45,7 +46,9 @@
         .edit-overlay { background: #fffbeb; border: 2px solid #f59e0b; padding: 20px; border-radius: 25px; margin-bottom: 20px; }
         .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 8px; border-radius: 15px; border: 1px solid #cbd5e1; }
         .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 13px; flex: 1; text-align: center; border:none; }
-        .content-fade { opacity: 0.4; filter: grayscale(1); }
+        
+        /* تأثير البهتان المطور */
+        .content-fade { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
         .route-header { background: #cbd5e1; color: #1e293b; padding: 8px 15px; border-radius: 15px; font-size: 11px; font-weight: 900; margin: 25px 0 10px 0; display: block; text-align: center; }
     </style>
 </head>
@@ -86,27 +89,22 @@
             <div class="flex gap-2"><button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-3 rounded-xl font-bold">حفظ وتحديث ✅</button><button onclick="document.getElementById('global-edit-form').classList.add('hidden')" class="bg-gray-400 text-white p-3 rounded-xl font-bold">إلغاء</button></div>
         </div>
 
-        <!-- 1. البحث -->
         <div id="view-search" class="tab-content active">
             <div class="bg-white p-4 rounded-3xl mb-6 border shadow-sm text-center">
-                <!-- اختيار الهوية المحدث -->
                 <div class="bg-gray-100 p-1 rounded-xl flex gap-1 mb-3">
                     <button onclick="uiSearchSwitch('passenger')" id="search-role-pas" class="flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm">🙋‍♂️ أنا راكب</button>
                     <button onclick="uiSearchSwitch('captain')" id="search-role-cap" class="flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500">🚗 أنا كابتن</button>
                 </div>
                 <input type="hidden" id="f-user-identity" value="passenger">
-
                 <div class="grid grid-cols-2 gap-2 mb-2">
                     <select id="f-o" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100"></select>
                     <select id="f-d" onchange="apiGetTrips()" class="form-input text-[11px] font-bold border-gray-100"></select>
                 </div>
-                
                 <div id="top-guide-banner" class="guide-banner">ملقيتش كابتن في طريقك؟ سجل مشوارك كراكب والكل هيشوف طلبك!</div>
             </div>
             <div id="list-public"></div>
         </div>
 
-        <!-- 2. النشر -->
         <div id="view-post" class="tab-content">
             <div class="bg-white p-5 rounded-[2.2rem] border shadow-sm">
                 <form id="postForm" onsubmit="apiPost(event)" class="space-y-4">
@@ -125,7 +123,7 @@
                         <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="السعر لليوم الواحد" class="form-input text-center"></div>
                         <select id="in-ac" class="form-input text-xs font-bold"><option value="true">✅ السيارة مكيفة</option><option value="false">❌ بدون تكييف</option></select>
                     </div>
-                    <textarea id="in-notes" placeholder="ملاحظات إضافية (الشنط، المواعيد...)" class="form-input h-20 mb-3 font-bold"></textarea>
+                    <textarea id="in-notes" placeholder="ملاحظات إضافية..." class="form-input h-20 mb-3 font-bold"></textarea>
                     <input type="tel" id="in-phone" required placeholder="رقم تليفونك 01..." class="form-input text-center font-black border-2 border-[#00a884]">
                     <button type="submit" id="btn-pub" class="btn-green p-4 text-lg shadow-lg font-black italic">سجل مشوارك الآن 🚀</button>
                 </form>
@@ -188,7 +186,6 @@
             document.getElementById('f-user-identity').value = identity;
             const capBtn = document.getElementById('search-role-cap');
             const pasBtn = document.getElementById('search-role-pas');
-
             if(identity === 'passenger') {
                 pasBtn.className = "flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm";
                 capBtn.className = "flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500";
@@ -236,35 +233,8 @@
                 });
                 list.innerHTML = html;
             } else {
-                list.innerHTML = `
-                    <div class="no-results-card">
-                        <div class="text-4xl mb-4">✨</div>
-                        <h3 class="text-[#00a884] font-black mb-3 text-xl">${identity==='passenger'?'ملقيتش كابتن؟':'ملقيتش ركاب؟'}</h3>
-                        <p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">${identity==='passenger'?'سجل مشوارك كراكب دلوقتي والكباتن هيكلموك.':'سجل مشوارك ككابتن دلوقتي والركاب هيوصلوا لك.'}</p>
-                        <button onclick="uiTab('post'); uiRole('${identity}');" class="btn-green w-full text-lg shadow-xl pulse-text italic">سجل مشوارك الآن ➕</button>
-                    </div>`;
+                list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">✨</div><h3 class="text-[#00a884] font-black mb-3 text-xl">${identity==='passenger'?'ملقيتش كابتن؟':'ملقيتش ركاب؟'}</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">${identity==='passenger'?'سجل مشوارك كراكب دلوقتي والكباتن هيكلموك.':'سجل مشوارك ككابتن دلوقتي والركاب هيوصلوا لك.'}</p><button onclick="uiTab('post'); uiRole('${identity}');" class="btn-green w-full text-lg shadow-xl pulse-text italic">سجل مشوارك الآن ➕</button></div>`;
             }
-        }
-
-        async function apiPost(event) {
-            event.preventDefault();
-            const h1 = document.getElementById('in-h1').value;
-            const h2 = document.getElementById('in-h2').value;
-            if(!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
-            const btn = document.getElementById('btn-pub'); btn.disabled = true;
-            const payload = {
-                user_role: document.getElementById('in-role').value,
-                origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
-                departure_time: h1 ? `${h1}:${document.getElementById('in-m1').value} ${document.getElementById('in-p1').value}` : null,
-                return_time: h2 ? `${h2}:${document.getElementById('in-m2').value} ${document.getElementById('in-p2').value}` : null,
-                whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
-                seats_available: document.getElementById('in-role').value === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
-                has_ac: document.getElementById('in-ac').value === "true",
-                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active'
-            };
-            await sb.from('trips').insert([payload]);
-            alert('تم تسجيل مشوارك بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search');
-            btn.disabled = false;
         }
 
         async function apiGetMyTrips() {
@@ -352,33 +322,61 @@
         function card(t, mode) {
             const isCap = t.user_role === 'captain';
             const isDone = t.status === 'completed';
+            
+            // تحديد محتوى الأزرار (خارج الفيد)
             let btnUI = mode === 'public' ? 
                 `<a href="https://wa.me/${t.whatsapp_number}" target="_blank" class="btn-green block text-center shadow-md py-4 text-sm font-black active:scale-95 transition-all italic">💬 تواصل واتساب</a>` :
                 `<div class="grid grid-cols-3 gap-2 mt-2">
-                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}
+                    ${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتملت</button>`}
                     <button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button>
                     <button onclick="apiAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button>
                 </div>`;
+            
             const displayPhone = t.whatsapp_number.replace(/^2/, '0');
+            const fadeClass = isDone ? 'content-fade' : '';
+
             return `<div class="trip-card">
-                    <div class="card-header">
-                        <div class="main-info">
-                            <h3 class="font-black text-[15px] text-slate-800 mb-2 truncate">${t.origin} ⬅️ ${t.destination}</h3>
-                            <div class="flex gap-4 items-center text-[10px] text-gray-500 font-bold mb-3 italic">
-                                ${t.departure_time && t.departure_time !== 'null' ? `<div>🕒 ذهاب: ${t.departure_time}</div>` : ''}
-                                ${t.return_time && t.return_time !== 'null' ? `<div>🕒 عودة: ${t.return_time}</div>` : ''}
+                    <div class="${fadeClass}">
+                        <div class="card-header">
+                            <div class="main-info">
+                                <h3 class="font-black text-[15px] text-slate-800 mb-2 truncate">${t.origin} ⬅️ ${t.destination}</h3>
+                                <div class="flex gap-4 items-center text-[10px] text-gray-500 font-bold mb-3 italic">
+                                    ${t.departure_time && t.departure_time !== 'null' ? `<div>🕒 ذهاب: ${t.departure_time}</div>` : ''}
+                                    ${t.return_time && t.return_time !== 'null' ? `<div>🕒 عودة: ${t.return_time}</div>` : ''}
+                                </div>
+                                ${isCap ? `<div class="flex gap-2 mb-3"><span class="feature-badge">💺 ${t.seats_available} مقاعد</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون تكييف'}</span></div>` : ''}
                             </div>
-                            ${isCap ? `<div class="flex gap-2 mb-3"><span class="feature-badge">💺 ${t.seats_available} مقاعد</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون تكييف'}</span></div>` : ''}
+                            <div class="side-info">
+                                <span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>
+                                ${isCap ? `<span class="price-text">${t.price_per_seat || 'حسب الاتفاق'}</span>` : ''}
+                            </div>
                         </div>
-                        <div class="side-info">
-                            <span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>
-                            ${isCap ? `<span class="price-text">${t.price_per_seat || 'حسب الاتفاق'}</span>` : ''}
-                        </div>
+                        ${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200">" ${t.notes} "</p>` : ''}
+                        ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center">📱 رقم الناشر: ${displayPhone}</p>` : ''}
                     </div>
-                    ${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200">" ${t.notes} "</p>` : ''}
-                    ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center">📱 رقم الناشر: ${displayPhone}</p>` : ''}
-                    <div class="${isDone && mode !== 'admin' ? 'content-fade' : ''}">${btnUI}</div>
+                    <div>${btnUI}</div>
                 </div>`;
+        }
+
+        async function apiPost(event) {
+            event.preventDefault();
+            const h1 = document.getElementById('in-h1').value;
+            const h2 = document.getElementById('in-h2').value;
+            if(!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
+            const btn = document.getElementById('btn-pub'); btn.disabled = true;
+            const payload = {
+                user_role: document.getElementById('in-role').value,
+                origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
+                departure_time: h1 ? `${h1}:${document.getElementById('in-m1').value} ${document.getElementById('in-p1').value}` : null,
+                return_time: h2 ? `${h2}:${document.getElementById('in-m2').value} ${document.getElementById('in-p2').value}` : null,
+                whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
+                seats_available: document.getElementById('in-role').value === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
+                has_ac: document.getElementById('in-ac').value === "true",
+                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active'
+            };
+            await sb.from('trips').insert([payload]);
+            alert('تم تسجيل مشوارك بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search');
+            btn.disabled = false;
         }
 
         function fillDropdowns() {
