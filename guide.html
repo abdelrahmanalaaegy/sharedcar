@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- 🌟 وسوم الـ Meta الجذابة لمعاينة الواتساب والفيسبوك (Open Graph) 🌟 -->
+    <title>دليل مستخدم ShareRide التفاعلي</title>
+    <meta name="description" content="جولة تفاعلية سريعة لشرح أزرار وكيفية استخدام منصة ShareRide لتنسيق وتجميع المشاوير.">
+    
+    <meta property="og:title" content="دليل مستخدم ShareRide التفاعلي 🚗✨">
+    <meta property="og:description" content="اضغط هنا لمشاهدة شرح سريع وبسيط لكيفية تنسيق مشاويرك وتجميع جيرانك وتوفير وقتك وفلوسك!">
+    <!-- ⚠️ ضع هنا رابط صورة حقيقي من منصتك لتظهر كمصغرة على واتساب -->
+    <meta property="og:image" content="https://abdelrahmanalaaegy.github.io/sharedcar/assets/images/preview.png"> 
+    <meta property="og:url" content="https://abdelrahmanalaaegy.github.io/sharedcar/guide.html">
+    <meta property="og:type" content="website">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+        .tour-overlay { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(6px); transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- كارت الترحيب الأساسي -->
+    <div id="welcome-card" class="max-w-md w-full bg-white rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 text-center relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-[#00a884]/10 rounded-full blur-xl"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-xl"></div>
+        
+        <div class="text-6xl mb-4 animate-bounce">🚗✨</div>
+        <h1 class="text-3xl font-black text-[#00a884] mb-2 italic tracking-tight">مشوارك الأول بيبدأ هنا!</h1>
+        <p class="text-slate-700 font-bold text-sm leading-relaxed mb-6">
+            أهلاً بك في <span class="text-[#128c7e] font-black">ShareRide</span>! الموقع الأسهل لتنسيق مشاويرك اليومية أو الشهرية. هنا الركاب اللي ساكنين قريب من بعض بيجمعوا بعضهم في مجموعات، والموقع بيسهل ليهم التواصل مع الكباتن القريبة منهم. تعال نشوف جولة سريعة بتشرح لك كل حاجة ببساطة!
+        </p>
+        
+        <div class="space-y-3">
+            <button onclick="startTour()" class="w-full bg-[#00a884] hover:bg-[#008f70] text-white p-4 rounded-2xl font-black text-lg transition shadow-lg shadow-emerald-100">
+                ابدأ الشرح خطوة بخطوة 🚀
+            </button>
+            <button onclick="skipTour()" class="w-full text-slate-400 font-bold text-xs hover:underline py-2">
+                تخطي ودخول للموقع على طول 😉
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة الجولة الإرشادية التفصيلية -->
+    <div id="tour-manager" class="tour-overlay fixed inset-0 z-[9999] hidden flex items-center justify-center p-4">
+        <div id="tour-bubble" class="bg-white rounded-[2.5rem] p-7 max-w-md w-full shadow-2xl border-2 border-[#00a884] space-y-5 text-right transform transition-all">
+            
+            <!-- العداد والأيقونة -->
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <span id="tour-badge" class="bg-emerald-50 text-[#00a884] font-black text-xs px-3 py-1 rounded-full">الخطوة 1</span>
+                <span id="tour-icon" class="text-3xl">🏠</span>
+            </div>
+            
+            <!-- محتوى الشرح المبسط -->
+            <div class="space-y-2">
+                <h3 id="tour-title" class="font-black text-xl text-slate-800">العنوان</h3>
+                <p id="tour-desc" class="text-slate-600 font-bold text-sm leading-relaxed whitespace-pre-line"></p>
+            </div>
+            
+            <!-- أزرار التحكم والاتجاهات -->
+            <div class="flex gap-3 pt-2">
+                <button id="tour-next-btn" onclick="nextStep()" class="flex-1 bg-[#00a884] text-white py-4 rounded-2xl font-black text-sm shadow-md transition active:scale-95">
+                    الخطوة التالية ⬅️
+                </button>
+                <button onclick="skipTour()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 px-5 py-4 rounded-2xl font-black text-sm transition">
+                    خروج
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tourSteps = [
+            {
+                title: "الصفحة الرئيسية 🏠",
+                desc: "دي الصفحة الأولى للموقع. بتوضح الفكرة وإزاي تستفيد منها.\n\nمن هنا تقدر تروح مباشرة لصفحة 'الاستكشاف' عشان تدور على مشاوير، أو تروح لصفحة 'سجل مشوارك' عشان تضيف مشوار جديد خاص بيك وتجمع الناس حوليك.",
+                icon: "🏠",
+                badge: "الخطوة 1 من 5"
+            },
+            {
+                title: "صفحة الاستكشاف والبحث 🔍",
+                desc: "المكان ده مخصص للبحث عن المشاوير القريبة منك، وبتنقسم لجزئين:\n\n• رحلات الركاب:\nلو أنت كابتن ومعاك عربية، ادخل هنا هتلاقي مجموعات ركاب ساكنين قريب من بعض وكاتبين طريقهم ومستنيين كابتن يوصلهم.\n\n• رحلات الكباتن:\nلو أنتم مجموعة ركاب وبتدوروا على عربية، ادخلوا هنا عشان تشوفوا الكباتن المتاحين في نفس طريقكم ومواعيدهم.",
+                icon: "🔍",
+                badge: "الخطوة 2 من 5"
+            },
+            {
+                title: "ميزة التجميع وانضمام الركاب لبعض 👥",
+                desc: "الميزة الأهم هنا إن الراكب مش لازم يستنى كابتن بس!\n\nلو دخلت صفحة الاستكشاف ولقيت راكب تاني كاتب مشوار في نفس طريقك، تقدر تضغط على زرار الانضمام وتدخل معاه في نفس المجموعة. بكده بتكبروا العدد سوا، وبتسهلوا على أي كابتن إنه يوافق يوصلكم لأنكم بقيتوا مجموعة جاهزة مع بعض.",
+                icon: "👥",
+                badge: "الخطوة 3 من 5"
+            },
+            {
+                title: "طريقة التواصل والتنسيق 🤝",
+                desc: "لما تفتح صفحة الاستكشاف وتلاقي مشوار مناسب لطريقك:\n\n• إذا كنت راكب وتريد الانضمام لكابتن:\nبتضغط على 'حجز مقعد' وتكتب رقمك، وهيظهرلك زرار يفتح شات واتساب مباشر مع الكابتن لتأكيد الميعاد.\n\n• إذا كنت كابتن وتريد توصيل مجموعة ركاب:\nبتشوف طلبات الركاب وتضغط على 'تقديم عرض توصيل' عشان تفتح شات واتساب مباشر مع الشخص المنسق للمجموعة وتتفقوا على التفاصيل.",
+                icon: "🤝",
+                badge: "الخطوة 4 من 5"
+            },
+            {
+                title: "صفحة رحلاتي 👤",
+                desc: "دي لوحة التحكم الخاصة بيك لمتابعة المشاوير اللى أضفتها قبل كده:\n\nاكتب رقم تليفونك واضغط دخول، وهيظهرلك كل طلباتك المفتوحة. من هنا تقدر تشوف أرقام الناس اللي انضمت لرحلتك وتكلمهم واتساب، أو تعدل بيانات المشوار، أو تحذفه لو اتلغى.",
+                icon: "👤",
+                badge: "الخطوة 5 من 5"
+            }
+        ];
+
+        let currentStep = 0;
+
+        function startTour() {
+            currentStep = 0;
+            document.getElementById('welcome-card').classList.add('hidden');
+            document.getElementById('tour-manager').classList.remove('hidden');
+            renderStep();
+        }
+
+        function renderStep() {
+            const step = tourSteps[currentStep];
+            document.getElementById('tour-title').innerText = step.title;
+            document.getElementById('tour-desc').innerText = step.desc;
+            document.getElementById('tour-icon').innerText = step.icon;
+            document.getElementById('tour-badge').innerText = step.badge;
+
+            const nextBtn = document.getElementById('tour-next-btn');
+            if (currentStep === tourSteps.length - 1) {
+                nextBtn.innerText = "فهمت، دخول للموقع 🚗";
+                nextBtn.className = "flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-md transition active:scale-95 text-center block";
+            } else {
+                nextBtn.innerText = "الخطوة التالية ⬅️";
+                nextBtn.className = "flex-1 bg-[#00a884] text-white py-4 rounded-2xl font-black text-sm shadow-md";
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < tourSteps.length - 1) {
+                currentStep++;
+                renderStep();
+            } else {
+                skipTour();
+            }
+        }
+
+        function skipTour() {
+            document.getElementById('tour-manager').classList.add('hidden');
+            
+            document.getElementById('welcome-card').innerHTML = `
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-[#00a884]/10 rounded-full blur-xl"></div>
+                <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-xl"></div>
+                
+                <button onclick="startTour()" title="إعادة الشرح" class="absolute top-4 right-4 text-slate-400 hover:text-[#00a884] transition p-2 bg-slate-50 hover:bg-emerald-50 rounded-full text-lg">
+                    🔄
+                </button>
+
+                <div class="text-6xl mb-4">🎉🔥</div>
+                <h2 class="text-2xl font-black text-slate-800 mb-2">رحلة سعيدة ومريحة!</h2>
+                <p class="text-sm text-slate-600 font-bold mb-6">أنت دلوقتي بقيت عارف كل جزء في الموقع بشكل بسيط ومضمون. يلا بينا نبدأ ونوفر وقت وفلوس مع جيراننا!</p>
+                
+                <a href="https://abdelrahmanalaaegy.github.io/sharedcar/" class="w-full bg-[#00a884] text-white p-4 rounded-2xl font-black text-base block text-center shadow-lg shadow-emerald-100 hover:bg-[#008f70] transition">انطلق للمنصة الآن 🚗</a>
+            `;
+            document.getElementById('welcome-card').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
