@@ -1,15 +1,32 @@
 {
-  "name": "ShareRide App",
+  "name": "ShareRide - شير رايد",
   "short_name": "ShareRide",
-  "start_url": "/index.html",
+  "description": "منصة تنسيق المشاوير اليومية والشهرية بين الكباتن والركاب",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#00A884",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#00a884",
+  "dir": "rtl",
+  "lang": "ar",
   "icons": [
+    {
+      "src": "logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
     {
       "src": "logo.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
