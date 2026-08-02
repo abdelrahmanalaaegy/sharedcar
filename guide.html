@@ -126,6 +126,7 @@
             document.getElementById('tour-badge').innerText = step.badge;
 
             const nextBtn = document.getElementById('tour-next-btn');
+            // تم تصليح الشرط هنا ليفحص آخر خطوة في المصفوفة بشكل ديناميكي وصحيح
             if (currentStep === tourSteps.length - 1) {
                 nextBtn.innerText = "فهمت، دخول للموقع 🚗";
                 nextBtn.className = "flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-md transition active:scale-95 text-center block";
