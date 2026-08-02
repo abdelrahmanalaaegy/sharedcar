@@ -33,10 +33,11 @@
         .side-info { display: flex; flex-direction: column; align-items: center; min-width: 75px; text-align: center; }
         
         .role-badge { padding: 5px 12px; border-radius: 10px; font-size: 9px; font-weight: 900; color: white; width: 100%; }
-        .price-text { font-size: 11px; font-weight: 900; color: #00a884; margin-top: 8px; line-height: 1.2; } /* مسافة 2 مللي */
+        .price-text { font-size: 11px; font-weight: 900; color: #00a884; margin-top: 8px; line-height: 1.2; }
         
         .btn-green { background: #00a884; color: white; border-radius: 22px; font-weight: 800; width: 100%; padding: 16px; transition: 0.2s; text-align: center; cursor: pointer; border:none; box-shadow: 0 8px 15px rgba(0,168,132,0.2); }
         .btn-green:active { transform: scale(0.96); }
+        .btn-green:disabled { opacity: 0.6; }
         .btn-blue { background: #2563eb; color: white; border-radius: 20px; font-weight: 800; width: 100%; padding: 16px; box-shadow: 0 8px 15px rgba(37, 99, 235, 0.2); }
         .btn-outline { border: 2.5px solid #00a884; color: #00a884; border-radius: 20px; font-weight: 800; width: 100%; padding: 14px; font-size: 12px; text-align: center; }
         
@@ -58,6 +59,8 @@
         .stat-box { background: #0b141a; color: white; padding: 15px; border-radius: 24px; text-align: center; border-bottom: 4px solid #00a884; }
         .stat-red { background: #7f1d1d !important; border-bottom: 4px solid #ef4444 !important; }
         .joined-list { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 15px; margin-top: 10px; }
+
+        #sr-toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #0b141a; color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 12px; font-weight: 800; z-index: 9998; box-shadow: 0 8px 20px rgba(0,0,0,.25); transition: opacity .3s; opacity: 0; pointer-events: none; max-width: 90%; text-align: center; }
     </style>
 </head>
 <body>
@@ -67,6 +70,8 @@
         <h1 class="text-4xl font-black text-[#00a884] mb-2 italic">ShareRide</h1>
         <p class="text-gray-400 font-bold pulse">جاري تشغيل المحرك... 🚗</p>
     </div>
+
+    <div id="sr-toast"></div>
 
     <!-- Navigation -->
     <header class="bg-white/80 backdrop-blur-md sticky top-0 z-[100] p-4 text-center border-b border-slate-100 rounded-b-[30px] shadow-sm">
@@ -180,7 +185,7 @@
                     <div class="grid grid-cols-2 gap-3"><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">كباتن</p><h2 id="count-cap" class="text-xl text-white font-black">0</h2></div><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">ركاب</p><h2 id="count-pas" class="text-xl text-white font-black">0</h2></div></div>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm text-right">
-                    <input type="tel" id="admin-search-phone" oninput="apiAdminReload()" placeholder="بحث برقم الهاتف..." class="form-input font-bold">
+                    <input type="tel" id="admin-search-phone" oninput="apiAdminReloadDebounced()" placeholder="بحث برقم الهاتف..." class="form-input font-bold">
                     <select id="admin-search-origin" onchange="apiAdminReload()" class="form-input font-bold text-xs mt-2"></select>
                 </div>
                 <div class="bg-white p-3 rounded-2xl border mb-3 shadow-sm flex items-center justify-between gap-2">
@@ -197,7 +202,7 @@
 
     </main>
 
-    <!-- Modal التعديل المصلح تماماً -->
+    <!-- Modal التعديل -->
     <div id="global-edit-form">
         <div class="edit-modal shadow-2xl space-y-4">
             <h3 class="font-black text-center text-amber-800 italic text-xl border-b border-amber-200 pb-2">📝 تعديل الرحلة</h3>
@@ -228,7 +233,7 @@
         </div>
     </div>
 
-    <!-- مودال النجاح والواتساب الصاروخي -->
+    <!-- مودال النجاح والواتساب -->
     <div id="join-success-modal" class="hidden fixed inset-0 z-[600] bg-black/80 flex items-center justify-center p-6 text-center">
         <div class="bg-white rounded-[3rem] p-8 max-w-sm w-full space-y-5 shadow-2xl border-4 border-[#00a884]">
             <div class="text-5xl animate-bounce">✅</div>
@@ -247,34 +252,118 @@
         let tripsPublic = [];
         let tripsMine = [];
         let tripsAdmin = [];
+        let realtimeChannel = null;
 
-        window.onload = function() {
-            setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 2000);
+        // -------------------- Helpers --------------------
+        function esc(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function isValidEgyptPhone(p) {
+            return /^01[0125][0-9]{8}$/.test((p || '').trim());
+        }
+
+        function debounce(fn, wait) {
+            let t;
+            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('sr-toast');
+            if (!el) return;
+            el.textContent = msg;
+            el.style.opacity = '1';
+            clearTimeout(el._t);
+            el._t = setTimeout(() => { el.style.opacity = '0'; }, 3000);
+        }
+
+        function friendlyError(prefix, e) {
+            console.error(e);
+            showToast(prefix + ' ❌');
+        }
+
+        // -------------------- Boot --------------------
+        window.onload = async function() {
+            setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 1200);
             try {
                 sb = supabase.createClient(SB_URL, SB_KEY);
                 fillDropdowns();
                 trackVisit();
                 apiGetTrips();
+                setupRealtime();
+                registerServiceWorker();
+
                 const savedPhone = localStorage.getItem('sr_my_phone');
-                if(savedPhone) document.getElementById('my-phone').value = savedPhone;
+                if (savedPhone) document.getElementById('my-phone').value = savedPhone;
+
+                const savedToken = sessionStorage.getItem('sr_admin_token');
+                if (savedToken) {
+                    const { data: valid } = await sb.rpc('is_valid_admin_session', { p_token: savedToken });
+                    if (valid) {
+                        document.getElementById('admin-auth').style.display = 'none';
+                        document.getElementById('admin-panel').classList.remove('hidden');
+                        loadAdminStats();
+                        apiAdminReload();
+                    } else {
+                        sessionStorage.removeItem('sr_admin_token');
+                    }
+                }
             } catch (e) { console.error(e); }
         };
 
-        async function trackVisit() {
-            if (localStorage.getItem('is_share_ride_admin') === 'true') return;
-            try {
-                const { data } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
-                if(data) await sb.from('site_stats').update({ visit_count: data.visit_count + 1 }).eq('id', 1);
-            } catch (e) {}
+        function registerServiceWorker() {
+            if (!('serviceWorker' in navigator)) return;
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+                    reg.addEventListener('updatefound', () => {
+                        const nw = reg.installing;
+                        if (!nw) return;
+                        nw.addEventListener('statechange', () => {
+                            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                                nw.postMessage('SKIP_WAITING');
+                            }
+                        });
+                    });
+                }).catch(() => {});
+            });
+            let refreshed = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshed) return;
+                refreshed = true;
+                window.location.reload();
+            });
         }
 
+        window.addEventListener('offline', () => showToast('📴 لا يوجد اتصال بالإنترنت، البيانات معروضة من آخر تحديث'));
+        window.addEventListener('online', () => { showToast('✅ الاتصال رجع'); apiGetTrips(); });
+
+        function setupRealtime() {
+            if (realtimeChannel) return;
+            realtimeChannel = sb.channel('trips-live')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, () => {
+                    const activeTab = document.querySelector('.tab-content.active');
+                    if (!activeTab) return;
+                    if (activeTab.id === 'view-search') apiGetTrips();
+                    if (activeTab.id === 'view-my' && document.getElementById('my-phone').value) apiGetMyTrips();
+                    if (activeTab.id === 'view-admin' && !document.getElementById('admin-panel').classList.contains('hidden')) apiAdminReload();
+                })
+                .subscribe();
+        }
+
+        async function trackVisit() {
+            if (sessionStorage.getItem('sr_admin_token')) return;
+            try { await sb.rpc('increment_visit_counter'); } catch (e) {}
+        }
+
+        // -------------------- Navigation --------------------
         function uiTab(id) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById('view-' + id).classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'text-[#00a884]'));
             document.getElementById('nav-' + id).classList.add('active');
-            if(id === 'search') apiGetTrips();
-            if(id === 'my') apiGetMyTrips();
+            if (id === 'search') apiGetTrips();
+            if (id === 'my' && document.getElementById('my-phone').value) apiGetMyTrips();
         }
 
         function uiSearchSwitch(identity) {
@@ -292,6 +381,7 @@
             document.getElementById('role-pas').className = !isCap ? "flex-1 py-3 rounded-xl font-black text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-xl font-black text-xs text-gray-500";
         }
 
+        // -------------------- Public search (server-side filtering) --------------------
         async function apiGetTrips() {
             const list = document.getElementById('list-public');
             list.innerHTML = '<p class="text-center py-20 text-gray-400 font-black italic">جاري البحث...</p>';
@@ -299,41 +389,53 @@
             const d = document.getElementById('f-d').value;
             const role = document.getElementById('f-user-identity').value;
 
-            const {data} = await sb.from('trips').select('*').eq('status', 'active').eq('user_role', role);
-            if(data) {
+            try {
+                let q = sb.from('trips').select('*').eq('status', 'active').eq('user_role', role);
+                if (o) q = q.eq('origin', o);
+                if (d) q = q.eq('destination', d);
+                const { data, error } = await q;
+                if (error) throw error;
+
                 data.sort((a, b) => LOCS.indexOf(a.origin) - LOCS.indexOf(b.origin));
-                let filtered = data;
-                if(o) filtered = filtered.filter(t => t.origin === o);
-                if(d) filtered = filtered.filter(t => t.destination === d);
-                tripsPublic = filtered;
-                if(filtered.length > 0) {
+                tripsPublic = data;
+                if (data.length > 0) {
                     let html = ''; let lastRoute = "";
-                    filtered.forEach(t => {
+                    data.forEach(t => {
                         let route = `${t.origin} ⬅️ ${t.destination}`;
-                        if(route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${route}</div>`; lastRoute = route; }
+                        if (route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${esc(route)}</div>`; lastRoute = route; }
                         html += card(t, 'public');
                     });
                     list.innerHTML = html;
                 } else {
-                    list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">✨</div><h3 class="text-[#00a884] font-black mb-3 text-xl">${role==='captain'?'مفيش كباتن؟':'مفيش ركاب؟'}</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك دلوقتي في القائمة، والناس هتلاقي طلبك وتتواصل معاك.</p><button onclick="uiTab('post'); uiRole('${role}');" class="btn-green w-full text-lg shadow-xl pulse-loading italic">سجل مشوارك الآن ➕</button></div>`;
+                    list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">✨</div><h3 class="text-[#00a884] font-black mb-3 text-xl">${role==='captain'?'مفيش كباتن؟':'مفيش ركاب؟'}</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك دلوقتي في القائمة، والناس هتلاقي طلبك وتتواصل معاك.</p><button onclick="uiTab('post'); uiRole('${role}');" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
                 }
+            } catch (e) {
+                list.innerHTML = '<p class="text-center py-20 text-red-400 font-black italic">تعذر تحميل الرحلات، حاول تاني</p>';
+                console.error(e);
             }
         }
 
         async function apiGetMyTrips() {
-            const p = document.getElementById('my-phone').value;
-            if(!p || p.length < 10) return;
-            localStorage.setItem('sr_my_phone', p);
+            const raw = document.getElementById('my-phone').value.trim();
             const list = document.getElementById('list-mine');
+            if (!isValidEgyptPhone(raw)) {
+                list.innerHTML = '<p class="text-center py-16 text-red-400 font-black italic">اكتب رقم صحيح (01xxxxxxxxx)</p>';
+                return;
+            }
+            localStorage.setItem('sr_my_phone', raw);
             list.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل رحلاتك...</p>';
-            const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).neq('status', 'deleted').order('created_at', {ascending: false});
-            if(data) {
+            try {
+                const { data, error } = await sb.from('trips').select('*').eq('whatsapp_number', '2' + raw).neq('status', 'deleted').order('created_at', { ascending: false });
+                if (error) throw error;
                 tripsMine = data;
-                if(data.length > 0) {
+                if (data.length > 0) {
                     list.innerHTML = data.map(t => card(t, 'my')).join('');
                 } else {
                     list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مسجلة بالرقم ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">تأكد إن الرقم صحيح، أو سجل مشوارك الأول دلوقتي.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
                 }
+            } catch (e) {
+                list.innerHTML = '<p class="text-center py-16 text-red-400 font-black italic">تعذر تحميل رحلاتك، حاول تاني</p>';
+                console.error(e);
             }
         }
 
@@ -343,31 +445,58 @@
             document.getElementById('list-mine').innerHTML = '';
         }
 
+        // -------------------- Post --------------------
         async function apiPost(event) {
             event.preventDefault();
             const h1 = document.getElementById('in-h1').value;
             const h2 = document.getElementById('in-h2').value;
-            if(!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
+            if (!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
+
+            const phone = document.getElementById('in-phone').value.trim();
+            if (!isValidEgyptPhone(phone)) return alert('رقم واتساب غير صحيح، لازم يبدأ بـ 01 ويكون 11 رقم');
+
             const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
 
+            const priceVal = document.getElementById('in-price').value;
+            const role = document.getElementById('in-role').value;
+
             const payload = {
-                user_role: document.getElementById('in-role').value, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
+                user_role: role, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
                 departure_time: h1 ? `${h1}:${document.getElementById('in-m1').value} ${document.getElementById('in-p1').value}` : '',
                 return_time: h2 ? `${h2}:${document.getElementById('in-m2').value} ${document.getElementById('in-p2').value}` : null,
-                whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
-                seats_available: document.getElementById('in-role').value === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
+                whatsapp_number: "2" + phone, notes: document.getElementById('in-notes').value,
+                seats_available: role === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
                 has_ac: document.getElementById('in-ac').value === "true",
-                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active', joined_passengers: []
+                price_egp: (role === 'captain' && priceVal) ? parseInt(priceVal, 10) : null,
+                status: 'active', joined_passengers: []
             };
-            const { error } = await sb.from('trips').insert([payload]);
-            if(!error) { alert('تم تسجيل مشوارك بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search'); }
-            btn.disabled = false; btn.innerText = "نشر الآن 🚀";
+
+            try {
+                const { error } = await sb.from('trips').insert([payload]);
+                if (error) {
+                    if (error.code === '23505') {
+                        alert('عندك بالفعل رحلة نشطة على نفس المسار، عدّل رحلتك الحالية بدل ما تسجل واحدة جديدة.');
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    alert('تم تسجيل مشوارك بنجاح! 🎉');
+                    document.getElementById('postForm').reset();
+                    uiRole('captain');
+                    uiTab('search');
+                }
+            } catch (e) {
+                alert('حصل خطأ أثناء النشر، حاول تاني ❌');
+                console.error(e);
+            }
+            btn.disabled = false; btn.innerText = "نشر المشوار الآن 🚀";
         }
 
+        // -------------------- Edit --------------------
         function openEdit(id, mode) {
             const source = mode === 'admin' ? tripsAdmin : mode === 'my' ? tripsMine : tripsPublic;
             const t = source.find(trip => trip.id === id);
-            if(!t) return alert("حدث خطأ في تحميل بيانات الرحلة، جرب تحدّث الصفحة");
+            if (!t) return alert("حدث خطأ في تحميل بيانات الرحلة، جرب تحدّث الصفحة");
             const isAdmin = mode === 'admin';
             const isCap = t.user_role === 'captain';
             document.getElementById('edit-admin-area').classList.toggle('hidden', !isAdmin);
@@ -379,21 +508,25 @@
             document.getElementById('edit-phone').value = t.whatsapp_number ? t.whatsapp_number.replace(/^20/, '0') : '';
             document.getElementById('edit-o').value = t.origin;
             document.getElementById('edit-d').value = t.destination;
-            
-            if(t.departure_time && t.departure_time !== 'null') {
+
+            if (t.departure_time && t.departure_time !== 'null') {
                 const p = t.departure_time.split(/[: ]/);
                 document.getElementById('edit-h1').value = p[0];
                 document.getElementById('edit-m1').value = p[1];
                 document.getElementById('edit-p1').value = p[2];
+            } else {
+                document.getElementById('edit-h1').value = '';
             }
-            if(t.return_time && t.return_time !== 'null') {
+            if (t.return_time && t.return_time !== 'null') {
                 const p = t.return_time.split(/[: ]/);
                 document.getElementById('edit-h2').value = p[0];
                 document.getElementById('edit-m2').value = p[1];
                 document.getElementById('edit-p2').value = p[2];
+            } else {
+                document.getElementById('edit-h2').value = '';
             }
 
-            document.getElementById('edit-price').value = t.price_per_seat ? t.price_per_seat.replace(' ج.م', '') : '';
+            document.getElementById('edit-price').value = (t.price_egp !== null && t.price_egp !== undefined) ? t.price_egp : (t.price_per_seat ? t.price_per_seat.replace(' ج.م', '') : '');
             document.getElementById('edit-seats').value = t.seats_available;
             document.getElementById('edit-ac').value = t.has_ac.toString();
             document.getElementById('edit-notes').value = t.notes || '';
@@ -409,92 +542,145 @@
         async function saveEdit() {
             const id = document.getElementById('edit-id').value;
             const mode = document.getElementById('edit-mode').value;
-            const source = mode === 'admin' ? tripsAdmin : mode === 'my' ? tripsMine : tripsPublic;
+            const source = mode === 'admin' ? tripsAdmin : tripsMine;
             const t = source.find(trip => trip.id === id);
+            if (!t) return;
             const isAdmin = mode === 'admin';
             const isCap = isAdmin ? (document.getElementById('edit-role').value === 'captain') : (t.user_role === 'captain');
 
             const h1 = document.getElementById('edit-h1').value;
             const h2 = document.getElementById('edit-h2').value;
 
-            const payload = {
-                origin: document.getElementById('edit-o').value, destination: document.getElementById('edit-d').value,
+            const patch = {
+                origin: document.getElementById('edit-o').value,
+                destination: document.getElementById('edit-d').value,
                 departure_time: h1 ? `${h1}:${document.getElementById('edit-m1').value} ${document.getElementById('edit-p1').value}` : '',
                 return_time: h2 ? `${h2}:${document.getElementById('edit-m2').value} ${document.getElementById('edit-p2').value}` : null,
-                price_per_seat: isCap ? (document.getElementById('edit-price').value ? document.getElementById('edit-price').value + " ج.م" : "") : "",
-                seats_available: isCap ? parseInt(document.getElementById('edit-seats').value) : 0,
+                price_egp: isCap ? (document.getElementById('edit-price').value || '') : '',
+                seats_available: isCap ? document.getElementById('edit-seats').value : 0,
                 has_ac: isCap ? (document.getElementById('edit-ac').value === "true") : false,
                 notes: document.getElementById('edit-notes').value
             };
 
-            if(isAdmin) {
-                const phone = document.getElementById('edit-phone').value;
-                if(!phone || phone.length < 11) return alert('رقم واتساب غير صحيح (لازم يبدأ بـ 01 ويكون 11 رقم)');
-                payload.whatsapp_number = '2' + phone;
-                payload.user_role = document.getElementById('edit-role').value;
+            try {
+                if (isAdmin) {
+                    const phone = document.getElementById('edit-phone').value.trim();
+                    if (!isValidEgyptPhone(phone)) return alert('رقم واتساب غير صحيح (لازم يبدأ بـ 01 ويكون 11 رقم)');
+                    patch.whatsapp_number = '2' + phone;
+                    patch.user_role = document.getElementById('edit-role').value;
+                    const token = sessionStorage.getItem('sr_admin_token');
+                    if (!token) return alert('انتهت جلسة الأدمن، سجّل دخول تاني');
+                    const { error } = await sb.rpc('admin_update_trip', { p_token: token, p_id: id, p_patch: patch });
+                    if (error) throw error;
+                    apiAdminReload();
+                } else {
+                    const phone = document.getElementById('my-phone').value.trim();
+                    const { error } = await sb.rpc('update_own_trip', { p_id: id, p_phone: '2' + phone, p_patch: patch });
+                    if (error) throw error;
+                    apiGetMyTrips();
+                }
+                alert('تم التحديث بنجاح ✅');
+                closeEdit();
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل التحديث ❌: تأكد من البيانات وحاول تاني');
+                console.error(e);
             }
-
-            const { error } = await sb.from('trips').update(payload).eq('id', id);
-            if(error) {
-                alert('فشل التحديث ❌: ' + error.message + '\n\nراجع صلاحيات UPDATE (RLS Policy) على جدول trips في Supabase.');
-                console.error(error);
-                return;
-            }
-            alert('تم التحديث بنجاح ✅');
-            closeEdit();
-            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
-            apiGetTrips();
         }
+
+        // -------------------- Status actions (owner / admin) --------------------
+        const OWNER_STATUS_MAP = { del: 'deleted', done: 'completed', active: 'active' };
 
         async function apiAction(id, act, mode) {
-            if(!confirm('تأكيد الإجراء؟')) return;
-            let error;
-            if(act === 'del') {
-                if(mode === 'admin') ({ error } = await sb.from('trips').delete().eq('id', id));
-                else ({ error } = await sb.from('trips').update({status: 'deleted'}).eq('id', id));
+            if (!confirm('تأكيد الإجراء؟')) return;
+            try {
+                if (mode === 'admin') {
+                    const token = sessionStorage.getItem('sr_admin_token');
+                    if (!token) return alert('انتهت جلسة الأدمن، سجّل دخول تاني');
+                    if (act === 'del' || act === 'delperm') {
+                        const { error } = await sb.rpc('admin_delete_trip', { p_token: token, p_id: id });
+                        if (error) throw error;
+                    } else {
+                        const status = act === 'done' ? 'completed' : 'active';
+                        const { error } = await sb.rpc('admin_set_status', { p_token: token, p_id: id, p_status: status });
+                        if (error) throw error;
+                    }
+                    apiAdminReload();
+                } else {
+                    const phone = '2' + document.getElementById('my-phone').value.trim();
+                    const { error } = await sb.rpc('set_own_trip_status', { p_id: id, p_phone: phone, p_status: OWNER_STATUS_MAP[act] });
+                    if (error) throw error;
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل تنفيذ الإجراء ❌: تأكد إن الرقم صحيح أو حاول تاني');
+                console.error(e);
             }
-            else if(act === 'delperm') ({ error } = await sb.from('trips').delete().eq('id', id));
-            else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).eq('id', id));
-            else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).eq('id', id));
-            if(error) {
-                alert('فشل تنفيذ الإجراء ❌: ' + error.message + '\n\nراجع صلاحيات RLS على جدول trips في Supabase.');
-                console.error(error);
-                return;
-            }
-            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
-            apiGetTrips();
         }
 
+        // -------------------- Join / leave --------------------
         async function joinAction(tripId, ownerPhone, origin, dest, ownerRole) {
-            const p = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
-            if(!p || p.length < 11) return alert("رقم غير صحيح");
-            const newP = '0'+p.substring(p.length-10);
-            const { data: trip } = await sb.from('trips').select('joined_passengers, seats_available').eq('id', tripId).single();
-            let passengers = trip.joined_passengers || [];
-            if(ownerRole === 'captain' && passengers.length >= trip.seats_available) return alert("الرحلة اكتملت");
-            if(passengers.includes(newP)) return alert("أنت منضم بالفعل");
-            passengers.push(newP);
-            await sb.from('trips').update({ joined_passengers: passengers, status: (ownerRole==='captain' && passengers.length === trip.seats_available) ? 'completed' : 'active' }).eq('id', tripId);
-            
-            let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
+            const raw = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
+            if (!raw) return;
+            const digits = raw.replace(/\D/g, '');
+            const local = digits.length > 10 ? '0' + digits.slice(-10) : digits;
+            if (!isValidEgyptPhone(local)) return alert("رقم غير صحيح");
 
-            // إعداد رابط الواتساب والزر في المودال
-            const waUrl = `https://api.whatsapp.com/send?phone=${ownerPhone}&text=${encodeURIComponent(msg)}`;
-            document.getElementById('direct-wa-btn').onclick = () => window.open(waUrl, '_blank');
-            document.getElementById('modal-title').innerText = ownerRole === 'captain' ? "تم الحجز مع الكابتن! ✅" : "تم الانضمام للمجموعة! 🤝";
-            document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
-            document.getElementById('join-success-modal').classList.remove('hidden');
-            apiGetTrips();
+            try {
+                const { data, error } = await sb.rpc('join_trip', { p_trip_id: tripId, p_phone: local });
+                if (error) throw error;
+                if (!data || !data.ok) {
+                    const messages = {
+                        trip_not_found: 'الرحلة دي مش موجودة',
+                        trip_not_active: 'الرحلة دي مش متاحة دلوقتي',
+                        own_trip: 'مينفعش تنضم لرحلتك انت',
+                        already_joined: 'أنت منضم بالفعل',
+                        trip_full: 'الرحلة اكتملت',
+                        invalid_phone: 'رقم غير صحيح'
+                    };
+                    return alert((data && messages[data.error]) || 'حصل خطأ، حاول تاني');
+                }
+
+                let msg = ownerRole === 'captain'
+                    ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.`
+                    : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
+
+                const waUrl = `https://api.whatsapp.com/send?phone=${ownerPhone}&text=${encodeURIComponent(msg)}`;
+                document.getElementById('direct-wa-btn').onclick = () => window.open(waUrl, '_blank');
+                document.getElementById('modal-title').innerText = ownerRole === 'captain' ? "تم الحجز مع الكابتن! ✅" : "تم الانضمام للمجموعة! 🤝";
+                document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
+                document.getElementById('join-success-modal').classList.remove('hidden');
+                apiGetTrips();
+            } catch (e) {
+                alert('حصل خطأ، حاول تاني');
+                console.error(e);
+            }
         }
 
-        async function removeJoiner(tripId, phoneToRemove) {
-            if(!confirm('إزالة هذا المنضم؟')) return;
-            const { data: trip } = await sb.from('trips').select('joined_passengers').eq('id', tripId).single();
-            let passengers = (trip.joined_passengers || []).filter(p => p !== phoneToRemove);
-            await sb.from('trips').update({ joined_passengers: passengers, status: 'active' }).eq('id', tripId);
-            apiGetMyTrips(); apiGetTrips();
+        async function removeJoiner(tripId, phoneToRemove, mode) {
+            if (!confirm('إزالة هذا المنضم؟')) return;
+            try {
+                if (mode === 'admin') {
+                    const token = sessionStorage.getItem('sr_admin_token');
+                    if (!token) return alert('انتهت جلسة الأدمن، سجّل دخول تاني');
+                    const { error } = await sb.rpc('admin_remove_joiner', { p_token: token, p_id: tripId, p_joiner_phone: phoneToRemove });
+                    if (error) throw error;
+                    apiAdminReload();
+                } else {
+                    const ownerPhone = '2' + document.getElementById('my-phone').value.trim();
+                    const { error } = await sb.rpc('remove_joiner', { p_id: tripId, p_owner_phone: ownerPhone, p_joiner_phone: phoneToRemove });
+                    if (error) throw error;
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل تنفيذ الإجراء ❌');
+                console.error(e);
+            }
         }
 
+        // -------------------- Card renderer --------------------
         function card(t, mode) {
             const isCap = t.user_role === 'captain';
             const isDone = t.status === 'completed';
@@ -506,12 +692,14 @@
             const hasDep = t.departure_time && t.departure_time !== 'null';
             const hasRet = t.return_time && t.return_time !== 'null';
             let tripType, tripTypeClass;
-            if(hasDep && hasRet) { tripType = '🔁 ذهاب وعودة'; tripTypeClass = 'bg-purple-100 text-purple-700'; }
-            else if(hasDep) { tripType = '➡️ ذهاب فقط'; tripTypeClass = 'bg-sky-100 text-sky-700'; }
+            if (hasDep && hasRet) { tripType = '🔁 ذهاب وعودة'; tripTypeClass = 'bg-purple-100 text-purple-700'; }
+            else if (hasDep) { tripType = '➡️ ذهاب فقط'; tripTypeClass = 'bg-sky-100 text-sky-700'; }
             else { tripType = '⬅️ عودة فقط'; tripTypeClass = 'bg-amber-100 text-amber-700'; }
 
+            const priceDisplay = (t.price_egp !== null && t.price_egp !== undefined) ? `${t.price_egp} ج.م` : (t.price_per_seat || 'حسب الاتفاق');
+
             let manageUI;
-            if(isDeleted) {
+            if (isDeleted) {
                 manageUI = `<div class="grid grid-cols-2 gap-2 mt-2"><button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">♻️ استرجاع للمستخدم</button><button onclick="apiAction('${t.id}', 'delperm', '${mode}')" class="bg-red-600 text-white p-2 rounded-xl text-[9px] font-black">🗑️ حذف نهائي</button></div>`;
             } else {
                 manageUI = `<div class="grid grid-cols-3 gap-2 mt-2">${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}<button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button><button onclick="apiAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button></div>`;
@@ -522,95 +710,4 @@
             const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
             const deletedBadge = isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
 
-            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${t.origin} ⬅️ ${t.destination}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${t.price_per_seat || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${t.notes} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p>` : ''}</div><div>${btnUI}</div></div>`;
-        }
-
-        async function apiAdminLogin() {
-            if(document.getElementById('admin-pass').value === 'Malika2017') {
-                localStorage.setItem('is_share_ride_admin', 'true');
-                document.getElementById('admin-auth').style.display = 'none';
-                document.getElementById('admin-panel').classList.remove('hidden');
-                const { data: stats } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
-                document.getElementById('visit-total').innerText = stats?.visit_count || 0;
-                const { count: capsCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'captain');
-                const { count: passCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'passenger');
-                document.getElementById('count-cap').innerText = capsCount || 0; document.getElementById('count-pas').innerText = passCount || 0;
-                apiAdminReload();
-            } else alert('خطأ');
-        }
-
-        async function apiAdminReload() {
-            const phone = document.getElementById('admin-search-phone').value.trim();
-            const origin = document.getElementById('admin-search-origin').value;
-
-            let q = sb.from('trips').select('*');
-            if(phone) q = q.ilike('whatsapp_number', `%${phone.replace(/^0/, '')}%`);
-            if(origin) q = q.eq('origin', origin);
-
-            const {data} = await q;
-            if(data) {
-                data.sort((a, b) => LOCS.indexOf(a.origin) - LOCS.indexOf(b.origin));
-                tripsAdmin = data;
-                document.getElementById('list-admin').innerHTML = data.length > 0 ? data.map(t => card(t, 'admin')).join('') : `<p class="text-center py-16 text-gray-400 font-black italic">مفيش رحلات مطابقة للبحث</p>`;
-                const selectAll = document.getElementById('admin-select-all');
-                if(selectAll) selectAll.checked = false;
-                updateBulkBar();
-            }
-        }
-
-        function toggleSelectAll(el) {
-            document.querySelectorAll('.admin-select-cb').forEach(cb => cb.checked = el.checked);
-            updateBulkBar();
-        }
-
-        function getSelectedTripIds() {
-            return Array.from(document.querySelectorAll('.admin-select-cb:checked')).map(cb => cb.value);
-        }
-
-        function updateBulkBar() {
-            const count = getSelectedTripIds().length;
-            const bar = document.getElementById('bulk-actions-bar');
-            if(bar) bar.style.display = count > 0 ? 'flex' : 'none';
-        }
-
-        async function bulkAction(act) {
-            const ids = getSelectedTripIds();
-            if(ids.length === 0) return;
-            const labels = { active: 'تنشيط', done: 'إكمال', delperm: 'حذف نهائي' };
-            if(!confirm(`تأكيد ${labels[act]} لعدد ${ids.length} رحلة؟`)) return;
-
-            let error;
-            if(act === 'delperm') ({ error } = await sb.from('trips').delete().in('id', ids));
-            else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).in('id', ids));
-            else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).in('id', ids));
-
-            if(error) {
-                alert('فشل تنفيذ الإجراء الجماعي ❌: ' + error.message);
-                console.error(error);
-                return;
-            }
-            apiAdminReload();
-            apiGetTrips();
-        }
-
-        function fillDropdowns() {
-            const dropdowns = ['in-o', 'in-d', 'f-o', 'f-d', 'edit-o', 'edit-d', 'admin-search-origin'];
-            dropdowns.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) {
-                    el.innerHTML = `<option value="">${id.includes('f-') || id.includes('admin') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
-                    LOCS.forEach(l => { el.innerHTML += `<option value="${l}">${l}</option>`; });
-                }
-            });
-
-            const hDropdowns = ['in-h1', 'in-h2', 'edit-h1', 'edit-h2'];
-            const mDropdowns = ['in-m1', 'in-m2', 'edit-m1', 'edit-m2'];
-            const hPlaceholders = { 'in-h1': 'بدون ذهاب', 'in-h2': 'بدون عودة', 'edit-h1': 'بدون ذهاب', 'edit-h2': 'بدون عودة' };
-            const hoursHtml = Array.from({length:12}, (_,i)=>(i+1).toString().padStart(2,'0')).map(h=>`<option value="${h}">${h}</option>`).join('');
-            const mHtml = ['00','15','30','45'].map(m=>`<option value="${m}">${m}</option>`).join('');
-            hDropdowns.forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = `<option value="">${hPlaceholders[id]}</option>` + hoursHtml; });
-            mDropdowns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = mHtml; });
-        }
-    </script>
-</body>
-</html>
+            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${esc(t.origin)} ⬅️ ${esc(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${hasDep?`<div>🕒 ذهاب: ${esc(t.departure_time)}</div>`:''} ${hasRet?`<div>🕒 عودة: ${esc(t.return_time)}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${esc(priceDisplay)}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${esc(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex 
