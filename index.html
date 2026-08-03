@@ -283,10 +283,44 @@
         let tripsMine = [];
         let tripsAdmin = [];
 
-        // فقط الأعمدة العامة المسموح لغير المسجلين يشوفوها (mgmt_code مش موجود هنا عشان محدش يقدر يسرقه)
-        const TRIP_COLS = "id,user_role,origin,destination,departure_time,return_time,whatsapp_number,notes,seats_available,price_per_seat,has_ac,status,joined_passengers,created_at";
+        // أعمدة العرض العام (من الـ View public_trips) - متعمّد مفيهاش whatsapp_number ولا mgmt_code
+        // عشان الرقم ميوصلش لـ HTML/DOM/Network خالص؛ التواصل بيتم فقط عبر RPC: get_trip_contact
+        const PUBLIC_TRIP_COLS = "id,user_role,origin,destination,departure_time,return_time,notes,seats_available,price_per_seat,has_ac,status,joined_passengers,created_at";
         // رابط سري لإظهار تاب الإدارة (غيّره لأي حاجة تحبها، وافتح الرابط + #owner-access مرة واحدة من جهازك)
         const ADMIN_HASH = '#owner-access';
+        // قفل بسيط لمنع الضغط المزدوج/تكرار الطلبات على نفس الرحلة (Race Condition) في العمليات الحساسة
+        const busyActions = new Set();
+
+        // تعقيم أي نص جاي من المستخدم قبل حقنه في HTML (يمنع XSS/DOM Injection من حقول زي الملاحظات أو السعر)
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // بيفتح واتساب لرحلة معينة بدون ما رقم الواتساب الحقيقي يوصل خالص للـ HTML/DOM/JSON Response/Network
+        // بيستدعي RPC آمنة (get_trip_contact) بترجع الرقم وقت الحاجة بس، وبعد موافقة صريحة من المستخدم (ضغطة زرار)
+        async function openWhatsApp(tripId, message) {
+            try {
+                const { data, error } = await sb.rpc('get_trip_contact', { p_trip_id: tripId });
+                if (error || !data) {
+                    alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
+                    if (error) console.error(error);
+                    return;
+                }
+                const phone = (typeof data === 'string' || typeof data === 'number')
+                    ? String(data)
+                    : (data.whatsapp_number || data.phone || '');
+                if (!phone) {
+                    alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
+                    return;
+                }
+                const url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(phone)}` + (message ? `&text=${encodeURIComponent(message)}` : '');
+                window.open(url, '_blank');
+            } catch (e) {
+                alert('حدث خطأ أثناء محاولة التواصل ❌');
+                console.error(e);
+            }
+        }
 
         function genToken() {
             if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
@@ -413,7 +447,7 @@
             const d = document.getElementById('f-d').value;
             const role = document.getElementById('f-user-identity').value;
 
-            let q = sb.from('trips').select(TRIP_COLS).eq('status', 'active').eq('user_role', role);
+            let q = sb.from('public_trips').select(PUBLIC_TRIP_COLS).eq('status', 'active').eq('user_role', role);
             if(o) q = q.eq('origin', o);
             if(d) q = q.eq('destination', d);
             const {data} = await q;
@@ -424,7 +458,7 @@
                     let html = ''; let lastRoute = "";
                     data.forEach(t => {
                         let route = `${t.origin} ⬅️ ${t.destination}`;
-                        if(route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${route}</div>`; lastRoute = route; }
+                        if(route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${escapeHtml(route)}</div>`; lastRoute = route; }
                         html += card(t, 'public');
                     });
                     list.innerHTML = html;
@@ -440,7 +474,12 @@
             localStorage.setItem('sr_my_phone', p);
             const list = document.getElementById('list-mine');
             list.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل رحلاتك...</p>';
-            const {data} = await sb.from('trips').select(TRIP_COLS).eq('whatsapp_number', '2'+p).neq('status', 'deleted').order('created_at', {ascending: false});
+            const {data, error} = await sb.rpc('get_my_trips_secure', { p_phone: '2'+p });
+            if (error) {
+                list.innerHTML = `<p class="text-center py-16 text-red-400 font-black italic">حصل خطأ أثناء تحميل رحلاتك، جرب تاني ❌</p>`;
+                console.error(error);
+                return;
+            }
             if(data) {
                 tripsMine = data;
                 if(data.length > 0) {
@@ -578,7 +617,9 @@
         }
 
         async function tripAction(id, act, mode) {
+            if (busyActions.has(id)) return;
             if(!confirm('تأكيد الإجراء؟')) return;
+            busyActions.add(id);
             try {
                 if (mode === 'admin') {
                     let error;
@@ -600,39 +641,48 @@
             } catch (e) {
                 alert('فشل تنفيذ الإجراء ❌: ' + e.message);
                 console.error(e);
+            } finally {
+                busyActions.delete(id);
             }
         }
 
-        async function joinAction(tripId, ownerPhone, origin, dest, ownerRole) {
+        async function joinAction(tripId, origin, dest, ownerRole) {
+            if (busyActions.has(tripId)) return;
             const raw = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
             if(!raw) return;
             const newP = raw.trim().replace(/[\s\-]/g, '');
             if(!/^01[0125]\d{8}$/.test(newP)) return alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)");
-            const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
-            if (error) {
-                if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
-                else if (error.message.includes('trip_full')) alert('الرحلة اكتملت');
-                else { alert('فشل الانضمام ❌: ' + error.message); console.error(error); }
-                return;
+            busyActions.add(tripId);
+            try {
+                const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
+                if (error) {
+                    if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
+                    else if (error.message.includes('trip_full')) alert('الرحلة اكتملت');
+                    else { alert('فشل الانضمام ❌: ' + error.message); console.error(error); }
+                    return;
+                }
+
+                saveJoinedTrip(tripId, newP);
+
+                let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
+
+                // إعداد زرار الواتساب في المودال - الرقم بيتجاب وقت الضغط فقط عبر RPC آمنة، مش متسرّب في الـ DOM
+                document.getElementById('direct-wa-btn').onclick = () => openWhatsApp(tripId, msg);
+                document.getElementById('modal-title').innerText = ownerRole === 'captain' ? "تم الحجز مع الكابتن! ✅" : "تم الانضمام للمجموعة! 🤝";
+                document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
+                document.getElementById('join-success-modal').classList.remove('hidden');
+                apiGetTrips();
+            } finally {
+                busyActions.delete(tripId);
             }
-
-            saveJoinedTrip(tripId, newP);
-
-            let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
-
-            // إعداد رابط الواتساب والزر في المودال
-            const waUrl = `https://api.whatsapp.com/send?phone=${ownerPhone}&text=${encodeURIComponent(msg)}`;
-            document.getElementById('direct-wa-btn').onclick = () => window.open(waUrl, '_blank');
-            document.getElementById('modal-title').innerText = ownerRole === 'captain' ? "تم الحجز مع الكابتن! ✅" : "تم الانضمام للمجموعة! 🤝";
-            document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
-            document.getElementById('join-success-modal').classList.remove('hidden');
-            apiGetTrips();
         }
 
         async function leaveTrip(tripId) {
+            if (busyActions.has(tripId)) return;
             const phone = getJoinedTrips()[tripId];
             if(!phone) { alert('مفيش بيانات انضمام محفوظة لهذه الرحلة على جهازك.'); return; }
             if(!confirm('متأكد إنك عاوز تسيب المجموعة؟')) return;
+            busyActions.add(tripId);
             try {
                 const { error } = await sb.rpc('leave_trip_secure', { p_id: tripId, p_phone: phone });
                 if(error) throw error;
@@ -651,6 +701,8 @@
                     alert('فشل ❌: ' + e.message);
                     console.error(e);
                 }
+            } finally {
+                busyActions.delete(tripId);
             }
         }
 
@@ -683,7 +735,8 @@
             const isDone = t.status === 'completed';
             const isDeleted = t.status === 'deleted';
             const passengers = t.joined_passengers || [];
-            const displayPhone = t.whatsapp_number.replace(/^20/, '0');
+            // t.whatsapp_number مش موجود أصلاً في وضع "public" (بيجي من public_trips اللي متعمّد من غير الرقم)
+            const displayPhone = t.whatsapp_number ? t.whatsapp_number.replace(/^20/, '0') : '';
             const fadeClass = (isDone || isDeleted) ? 'content-fade' : '';
 
             const hasDep = t.departure_time && t.departure_time !== 'null';
@@ -716,13 +769,18 @@
             const leaveBtnGroup = `<button onclick="leaveTrip('${t.id}')" class="flex-1 text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة</button>`;
             let btnUI;
             if (mode === 'public') {
+                // الرقم بقى مبيوصلش للـ HTML خالص في وضع public؛ التواصل بيتم بضغطة زرار عبر openWhatsApp
+                // اللي بيجيب الرقم لحظيًا من RPC آمنة (get_trip_contact) بدل ما يكون مطبوع في الصفحة أو الـ DOM
+                // بنستخدم JSON.stringify عشان نبني الـ arguments بأمان (يمنع أي كسر لكود الـ onclick)
+                const inquiryMsg = 'سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' عبر ShareRide وعاوز أستفسر عن حاجة.';
+                const offerMsg = 'سلام عليكم، شفت رحلتك من ' + t.origin + ' عبر ShareRide وحابب أتواصل معاك بخصوصها.';
                 if (isCap) {
-                    const inquiryLink = `<a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' عبر ShareRide وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a>`;
-                    const actionBtn = alreadyJoined ? leaveBtnCaptain : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button>`;
+                    const inquiryLink = `<button onclick='openWhatsApp(${JSON.stringify(t.id)}, ${JSON.stringify(inquiryMsg)})' class="btn-outline flex-1">استفسار 💬</button>`;
+                    const actionBtn = alreadyJoined ? leaveBtnCaptain : `<button onclick='joinAction(${JSON.stringify(t.id)}, ${JSON.stringify(t.origin)}, ${JSON.stringify(t.destination)}, "captain")' class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button>`;
                     btnUI = `<div class="flex gap-2">${inquiryLink}${actionBtn}</div>`;
                 } else {
-                    const offerLink = `<a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، شفت رحلتك من ' + t.origin + ' عبر ShareRide وحابب أتواصل معاك بخصوصها.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">كلمني 💬</a>`;
-                    const actionBtn = alreadyJoined ? leaveBtnGroup : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button>`;
+                    const offerLink = `<button onclick='openWhatsApp(${JSON.stringify(t.id)}, ${JSON.stringify(offerMsg)})' class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">كلمني 💬</button>`;
+                    const actionBtn = alreadyJoined ? leaveBtnGroup : `<button onclick='joinAction(${JSON.stringify(t.id)}, ${JSON.stringify(t.origin)}, ${JSON.stringify(t.destination)}, "passenger")' class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button>`;
                     btnUI = `<div class="flex gap-2 mt-1">${offerLink}${actionBtn}</div>`;
                 }
             } else {
@@ -732,7 +790,7 @@
             const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
             const deletedBadge = isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
 
-            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${t.origin} ⬅️ ${t.destination}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${t.price_per_seat || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${t.notes} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${t.mgmt_code || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}</div><div>${btnUI}</div></div>`;
+            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${escapeHtml(t.origin)} ⬅️ ${escapeHtml(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${escapeHtml(t.mgmt_code) || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}</div><div>${btnUI}</div></div>`;
         }
 
         async function apiAdminLogin() {
