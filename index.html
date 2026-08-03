@@ -299,19 +299,34 @@
 
         // بيفتح واتساب لرحلة معينة بدون ما رقم الواتساب الحقيقي يوصل خالص للـ HTML/DOM/JSON Response/Network
         // بيستدعي RPC آمنة (get_trip_contact) بترجع الرقم وقت الحاجة بس، وبعد موافقة صريحة من المستخدم (ضغطة زرار)
+        // بيستخرج رقم الهاتف من نتيجة get_trip_contact بغض النظر عن شكل الإرجاع
+        // (scalar text، أو table/setof بيرجع array، أو json/jsonb كـ object)
+        function extractPhoneFromRpcData(data) {
+            if (data === null || data === undefined) return '';
+            if (typeof data === 'string' || typeof data === 'number') return String(data);
+            if (Array.isArray(data)) {
+                if (data.length === 0) return '';
+                const first = data[0];
+                if (typeof first === 'string' || typeof first === 'number') return String(first);
+                if (first && typeof first === 'object') return first.whatsapp_number || first.phone || first.value || '';
+                return '';
+            }
+            if (typeof data === 'object') return data.whatsapp_number || data.phone || data.value || '';
+            return '';
+        }
+
         async function openWhatsApp(tripId, message) {
             try {
                 const { data, error } = await sb.rpc('get_trip_contact', { p_trip_id: tripId });
-                if (error || !data) {
+                if (error) {
                     alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
-                    if (error) console.error(error);
+                    console.error(error);
                     return;
                 }
-                const phone = (typeof data === 'string' || typeof data === 'number')
-                    ? String(data)
-                    : (data.whatsapp_number || data.phone || '');
+                const phone = extractPhoneFromRpcData(data);
                 if (!phone) {
                     alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
+                    console.error('get_trip_contact returned an unexpected/empty shape:', data);
                     return;
                 }
                 const url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(phone)}` + (message ? `&text=${encodeURIComponent(message)}` : '');
