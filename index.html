@@ -615,7 +615,7 @@
         async function leaveTrip(tripId) {
             const phone = getJoinedTrips()[tripId];
             if(!phone) { alert('مفيش بيانات انضمام محفوظة لهذه الرحلة على جهازك.'); return; }
-            if(!confirm('متأكد إنك عاوز تسيب المجموعة/الرحلة دي؟')) return;
+            if(!confirm('متأكد إنك عاوز تسيب المجموعة؟')) return;
             try {
                 const { error } = await sb.rpc('leave_trip_secure', { p_id: tripId, p_phone: phone });
                 if(error) throw error;
@@ -623,8 +623,17 @@
                 alert('تم خروجك من المجموعة بنجاح ✅');
                 apiGetTrips();
             } catch (e) {
-                alert('فشل ❌: ' + e.message);
-                console.error(e);
+                // لو السبب إن الناشر/الكابتن كان مسبقًا شالك من الرحلة (أو المقعد)،
+                // منعرضش رسالة "فشل" فنية، ونظهر رسالة ودّية بدل ما تسبب زعل بين الطرفين
+                const msg = (e.message || '').toLowerCase();
+                if (msg.includes('not_joined') || msg.includes('not joined')) {
+                    removeJoinedTripLocal(tripId);
+                    alert('تم حذفك من الرحلة ✅');
+                    apiGetTrips();
+                } else {
+                    alert('فشل ❌: ' + e.message);
+                    console.error(e);
+                }
             }
         }
 
@@ -679,7 +688,7 @@
             }
 
             const alreadyJoined = !!getJoinedTrips()[t.id];
-            const leaveBtn = `<button onclick="leaveTrip('${t.id}')" class="w-full text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة / الرحلة دي</button>`;
+            const leaveBtn = `<button onclick="leaveTrip('${t.id}')" class="w-full text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة</button>`;
             let btnUI = mode === 'public' ? (alreadyJoined ? leaveBtn : (isCap ? `<div class="flex gap-2"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button></div>` : `<div class="flex gap-2 mt-1"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، أنا كابتن ومعايا عربية وشفت طلبك لرحلة ' + t.origin + ' وممكن أوصلك.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">تقديم عرض توصيل 🚗</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button></div>`)) : manageUI;
 
             const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
