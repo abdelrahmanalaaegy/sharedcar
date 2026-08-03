@@ -359,6 +359,17 @@
         </div>
     </div>
 
+    <!-- مودال عرض رحلة واحدة (من الإشعار مباشرة، من غير أي زحمة كروت تانية) -->
+    <div id="single-trip-modal" class="hidden fixed inset-0 z-[700] bg-black/80 flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] p-5 max-w-sm w-full max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-black text-lg text-slate-800">🎉 الرحلة المتوافقة</h2>
+                <button onclick="closeSingleTripModal()" class="text-gray-400 text-2xl leading-none px-2">×</button>
+            </div>
+            <div id="single-trip-content" class="overflow-y-auto flex-1"></div>
+        </div>
+    </div>
+
     <script>
         const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
@@ -498,18 +509,23 @@
                 list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">مفيش إشعارات لسه</p>`;
                 return;
             }
-            list.innerHTML = data.map(n => `
-                <div class="p-3 rounded-2xl border ${n.is_read ? 'bg-gray-50 border-gray-100' : 'bg-emerald-50 border-emerald-200'}">
+            list.innerHTML = data.map(n => {
+                const clickable = n.type === 'match' && n.related_trip_id;
+                return `
+                <div class="p-3 rounded-2xl border ${n.is_read ? 'bg-gray-50 border-gray-100' : 'bg-emerald-50 border-emerald-200'} ${clickable ? 'cursor-pointer active:scale-95 transition' : ''}"
+                     ${clickable ? `onclick="openSingleTripModal('${n.related_trip_id}')"` : ''}>
                     <div class="flex items-start gap-2">
                         <span class="text-lg">${NOTIF_ICONS[n.type] || '🔔'}</span>
                         <div class="flex-1 text-right">
                             <p class="font-black text-xs text-slate-800">${escapeHtml(n.title)}</p>
                             ${n.body ? `<p class="text-[11px] text-gray-500 font-bold mt-1">${escapeHtml(n.body)}</p>` : ''}
                             <p class="text-[9px] text-gray-400 font-bold mt-1">${fmtNotifTime(n.created_at)}</p>
+                            ${clickable ? `<p class="text-[10px] text-[#00a884] font-black mt-2">👈 دوس هنا تشوف الرحلة</p>` : ''}
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
             const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
             if (unreadIds.length > 0) {
@@ -966,6 +982,31 @@
             const deletedBadge = isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
 
             return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${escapeHtml(t.origin)} ⬅️ ${escapeHtml(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${escapeHtml(t.mgmt_code) || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}${mode === 'my' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 الرحلة دي مسجلة برقم: ${escapeHtml(displayPhone)}</p>` : ''}</div><div>${btnUI}</div></div>`;
+        }
+
+        // بيفتح مودال فيه كارت رحلة واحدة بس (من غير أي كروت تانية حواليها)
+        // بيتنادى لما المستخدم يدوس على إشعار ماتشينج، عشان يركّز على الرحلة المتوافقة ويقرر يعمل إيه براحته
+        async function openSingleTripModal(tripId) {
+            closeNotifications();
+            const modal = document.getElementById('single-trip-modal');
+            const content = document.getElementById('single-trip-content');
+            modal.classList.remove('hidden');
+            content.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل الرحلة...</p>';
+
+            const { data, error } = await sb.from('public_trips').select(PUBLIC_TRIP_COLS).eq('id', tripId).maybeSingle();
+
+            if (error || !data) {
+                content.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">😕</div><h3 class="text-slate-700 font-black mb-2 text-lg">الرحلة دي مبقتش متاحة</h3><p class="text-gray-500 text-sm font-bold leading-relaxed">يمكن اتحذفت أو خلصت من صاحبها. جرب تستكشف رحلات تانية بدلها.</p></div>`;
+                return;
+            }
+
+            // بنضيفها لقائمة tripsPublic المؤقتة عشان أزرار الكارت (استفسار/حجز/انضمام) تلاقي بيانات الرحلة لما تتنفذ
+            tripsPublic = tripsPublic.filter(t => t.id !== data.id).concat([data]);
+            content.innerHTML = card(data, 'public');
+        }
+
+        function closeSingleTripModal() {
+            document.getElementById('single-trip-modal').classList.add('hidden');
         }
 
         async function apiAdminLogin() {
