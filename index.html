@@ -172,9 +172,7 @@
         <div id="view-my" class="tab-content text-center">
             <div class="bg-white p-7 rounded-[2.5rem] border-2 border-black mb-6 shadow-sm">
                 <h2 class="font-black mb-3 italic text-xl">إدارة رحلاتي 👤</h2>
-                <input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-4 font-black border-slate-300">
-                <button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-4 rounded-2xl font-black active:scale-95 shadow-lg">دخول 🔓</button>
-                <button onclick="myLogout()" class="w-full text-gray-400 text-[11px] font-bold underline mt-3">مش أنا؟ غيّر الرقم</button>
+                <p class="text-[11px] text-gray-400 font-bold leading-relaxed">بتتعرض هنا الرحلات اللي عملتها أو ربطتها بالجهاز ده بس (بكود الإدارة 🔑) — مش بمجرد كتابة رقم تليفون.</p>
             </div>
             <div id="list-mine"></div>
         </div>
@@ -408,8 +406,6 @@
                 await checkAdminSession();
                 trackVisit();
                 apiGetTrips();
-                const savedPhone = localStorage.getItem('sr_my_phone');
-                if(savedPhone) document.getElementById('my-phone').value = savedPhone;
             } catch (e) { console.error(e); }
         };
 
@@ -484,12 +480,16 @@
         }
 
         async function apiGetMyTrips() {
-            const p = document.getElementById('my-phone').value;
-            if(!p || p.length < 10) return;
-            localStorage.setItem('sr_my_phone', p);
             const list = document.getElementById('list-mine');
+            // بنقرا أكواد إدارة الرحلات المحفوظة على الجهاز ده بس (نفس الفكرة المستخدمة في التعديل/الحذف)
+            // بدل الاعتماد على رقم تليفون بيتكتب، عشان محدش يقدر يشوف رحلات حد تاني بمجرد معرفة رقمه
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) {
+                list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">لو نشرت رحلة من جهاز تاني، اضغط 🔑 تحتها هنا وحط كود إدارتها، أو سجل مشوارك الأول دلوقتي.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
+                return;
+            }
             list.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل رحلاتك...</p>';
-            const {data, error} = await sb.rpc('get_my_trips_secure', { p_phone: '2'+p });
+            const {data, error} = await sb.rpc('get_my_trips_by_tokens', { p_tokens: tokens });
             if (error) {
                 list.innerHTML = `<p class="text-center py-16 text-red-400 font-black italic">حصل خطأ أثناء تحميل رحلاتك، جرب تاني ❌</p>`;
                 console.error(error);
@@ -500,15 +500,9 @@
                 if(data.length > 0) {
                     list.innerHTML = data.map(t => card(t, 'my')).join('');
                 } else {
-                    list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مسجلة بالرقم ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">تأكد إن الرقم صحيح، أو سجل مشوارك الأول دلوقتي.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
+                    list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك الأول دلوقتي، أو اربط رحلة قديمة بكود الإدارة 🔑.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
                 }
             }
-        }
-
-        function myLogout() {
-            localStorage.removeItem('sr_my_phone');
-            document.getElementById('my-phone').value = '';
-            document.getElementById('list-mine').innerHTML = '';
         }
 
         async function apiPost(event) {
