@@ -348,8 +348,9 @@
     </div>
 
     <!-- مودال الإشعارات -->
-    <div id="notif-modal" class="hidden fixed inset-0 z-[600] bg-black/70 flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2.5rem] p-6 max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl">
+    <!-- الضغط على أي حتة في الخلفية الغامقة بيقفل المودال زي زرار X بالظبط، والضغط جوه الكارت الأبيض نفسه مابيقفلوش -->
+    <div id="notif-modal" class="hidden fixed inset-0 z-[600] bg-black/70 flex items-center justify-center p-4" onclick="closeNotifications()">
+        <div class="bg-white rounded-[2.5rem] p-6 max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="font-black text-lg text-slate-800">🔔 الإشعارات</h2>
                 <button onclick="closeNotifications()" class="text-gray-400 text-2xl leading-none px-2">×</button>
@@ -360,8 +361,9 @@
     </div>
 
     <!-- مودال عرض رحلة واحدة (من الإشعار مباشرة، من غير أي زحمة كروت تانية) -->
-    <div id="single-trip-modal" class="hidden fixed inset-0 z-[700] bg-black/80 flex items-center justify-center p-4">
-        <div class="bg-white rounded-[2.5rem] p-5 max-w-sm w-full max-h-[85vh] flex flex-col shadow-2xl">
+    <!-- نفس الفكرة: الضغط بره الكارت الأبيض بيقفل المودال، والضغط جواه (زرار حجز/انضمام/استفسار) بيشتغل عادي -->
+    <div id="single-trip-modal" class="hidden fixed inset-0 z-[700] bg-black/80 flex items-center justify-center p-4" onclick="closeSingleTripModal()">
+        <div class="bg-white rounded-[2.5rem] p-5 max-w-sm w-full max-h-[85vh] flex flex-col shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="font-black text-lg text-slate-800">🎉 الرحلة المتوافقة</h2>
                 <button onclick="closeSingleTripModal()" class="text-gray-400 text-2xl leading-none px-2">×</button>
