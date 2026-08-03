@@ -42,7 +42,12 @@
         
         .feature-badge { background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 10px; font-size: 10px; font-weight: 900; }
         .content-fade { opacity: 0.4; filter: grayscale(1); }
-        .route-header { background: #cbd5e1; color: #1e293b; padding: 10px 20px; border-radius: 18px; font-size: 12px; font-weight: 900; margin: 25px 0 15px 0; display: block; text-align: center; border: 1px solid #cbd5e1; position: sticky; top: var(--header-h, 76px); z-index: 40; }
+        .route-header { background: #cbd5e1; color: #1e293b; padding: 10px 20px; border-radius: 18px; font-size: 12px; font-weight: 900; margin: 25px 0 15px 0; display: block; text-align: center; border: 1px solid #cbd5e1; position: sticky; top: var(--header-h, 76px); z-index: 40; box-shadow: 0 6px 14px rgba(0,0,0,0.06); }
+
+        /* زرار الرجوع لفوق */
+        #scroll-top-btn { position: fixed; bottom: 90px; left: 18px; width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,168,132,0.35); border: none; z-index: 200; opacity: 0; transform: translateY(15px) scale(0.8); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
+        #scroll-top-btn.show { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        #scroll-top-btn:active { transform: scale(0.9); }
         
         #loading-overlay { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
         .pulse { animation: pulse-anim 1.5s infinite; }
@@ -202,6 +207,11 @@
 
     </main>
 
+    <!-- زرار الرجوع لفوق -->
+    <button id="scroll-top-btn" onclick="scrollToTop()" aria-label="الرجوع لفوق">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+    </button>
+
     <!-- Modal التعديل المصلح تماماً -->
     <div id="global-edit-form">
         <div class="edit-modal shadow-2xl space-y-4">
@@ -288,6 +298,25 @@
             if (header) document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
         }
         window.addEventListener('resize', syncHeaderHeight);
+
+        // إظهار زرار الرجوع لفوق بس لما السكرول يتوقف
+        let scrollStopTimer;
+        const scrollTopBtn = () => document.getElementById('scroll-top-btn');
+        window.addEventListener('scroll', () => {
+            const btn = scrollTopBtn();
+            if (!btn) return;
+            btn.classList.remove('show'); // يتخفي فورًا وهو بيتحرك
+            clearTimeout(scrollStopTimer);
+            scrollStopTimer = setTimeout(() => {
+                if (window.scrollY > 250) btn.classList.add('show');
+            }, 220);
+        }, { passive: true });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const btn = scrollTopBtn();
+            if (btn) btn.classList.remove('show');
+        }
 
         window.onload = async function() {
             setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 2000);
