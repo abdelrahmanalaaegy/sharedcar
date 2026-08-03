@@ -387,16 +387,16 @@
             const d = document.getElementById('f-d').value;
             const role = document.getElementById('f-user-identity').value;
 
-            const {data} = await sb.from('trips').select(TRIP_COLS).eq('status', 'active').eq('user_role', role);
+            let q = sb.from('trips').select(TRIP_COLS).eq('status', 'active').eq('user_role', role);
+            if(o) q = q.eq('origin', o);
+            if(d) q = q.eq('destination', d);
+            const {data} = await q;
             if(data) {
                 data.sort((a, b) => LOCS.indexOf(a.origin) - LOCS.indexOf(b.origin));
-                let filtered = data;
-                if(o) filtered = filtered.filter(t => t.origin === o);
-                if(d) filtered = filtered.filter(t => t.destination === d);
-                tripsPublic = filtered;
-                if(filtered.length > 0) {
+                tripsPublic = data;
+                if(data.length > 0) {
                     let html = ''; let lastRoute = "";
-                    filtered.forEach(t => {
+                    data.forEach(t => {
                         let route = `${t.origin} ⬅️ ${t.destination}`;
                         if(route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${route}</div>`; lastRoute = route; }
                         html += card(t, 'public');
