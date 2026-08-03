@@ -828,7 +828,9 @@
             try {
                 const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
                 if (error) {
-                    if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
+                    if (error.message.includes('already_in_another_trip')) alert('انت منضم لرحلة تانية دلوقتي 🙏\nسيب الرحلة اللي انت فيها الأول من "رحلاتي"، وبعدها تقدر تنضم للرحلة دي.');
+                    else if (error.message.includes('owns_active_trip')) alert('عندك رحلة شغالة بتاعتك دلوقتي 🙏\nسيبها أو خلّصها الأول من "رحلاتي"، وبعدها تقدر تنضم لرحلة تانية.');
+                    else if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
                     else if (error.message.includes('trip_full')) alert('الرحلة اكتملت');
                     else { alert('فشل الانضمام ❌: ' + error.message); console.error(error); }
                     return;
