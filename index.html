@@ -83,7 +83,7 @@
             <button onclick="uiTab('my')" id="nav-my" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
                 <span class="text-lg">👤 رحلاتي</span>
             </button>
-            <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+            <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn text-slate-400 flex flex-col items-center gap-1" style="display:none;">
                 <span class="text-lg">⚙️</span><span class="text-[9px]">الإدارة</span>
             </button>
         </div>
@@ -173,8 +173,13 @@
 
         <!-- 5. الإدارة -->
         <div id="view-admin" class="tab-content text-center">
-            <div id="admin-auth" class="bg-white p-8 rounded-3xl border shadow-sm"><input type="password" id="admin-pass" placeholder="كلمة المرور" class="form-input text-center mb-4 border-2"><button onclick="apiAdminLogin()" class="w-full bg-black text-white p-4 rounded-2xl font-black">دخول المدير</button></div>
+            <div id="admin-auth" class="bg-white p-8 rounded-3xl border shadow-sm space-y-3">
+                <input type="email" id="admin-email" placeholder="الإيميل" autocomplete="username" class="form-input text-center border-2">
+                <input type="password" id="admin-pass" placeholder="كلمة المرور" autocomplete="current-password" class="form-input text-center border-2">
+                <button onclick="apiAdminLogin()" class="w-full bg-black text-white p-4 rounded-2xl font-black">دخول المدير</button>
+            </div>
             <div id="admin-panel" class="hidden">
+                <button onclick="adminLogout()" class="w-full bg-gray-200 text-gray-600 p-3 rounded-2xl font-black text-xs mb-4">🚪 خروج من حساب الأدمن</button>
                 <div class="grid grid-cols-1 gap-3 mb-6 text-center">
                     <div class="stat-box"><p class="text-[10px] opacity-70 font-black text-white">الزيارات</p><h2 id="visit-total" class="text-3xl font-black text-[#00a884]">0</h2></div>
                     <div class="grid grid-cols-2 gap-3"><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">كباتن</p><h2 id="count-cap" class="text-xl text-white font-black">0</h2></div><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">ركاب</p><h2 id="count-pas" class="text-xl text-white font-black">0</h2></div></div>
@@ -248,11 +253,38 @@
         let tripsMine = [];
         let tripsAdmin = [];
 
-        window.onload = function() {
+        // فقط الأعمدة العامة المسموح لغير المسجلين يشوفوها (edit_token مش موجود هنا عشان محدش يقدر يسرقه)
+        const TRIP_COLS = "id,user_role,origin,destination,departure_time,return_time,whatsapp_number,notes,seats_available,price_per_seat,has_ac,status,joined_passengers,created_at";
+        // رابط سري لإظهار تاب الإدارة (غيّره لأي حاجة تحبها، وافتح الرابط + #owner-access مرة واحدة من جهازك)
+        const ADMIN_HASH = '#owner-access';
+
+        function genToken() {
+            if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+            return 'tk' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        function getLocalTokens() {
+            try { return JSON.parse(localStorage.getItem('sr_tokens') || '{}'); } catch (e) { return {}; }
+        }
+        function getLocalToken(id) { return getLocalTokens()[id]; }
+        function saveLocalToken(id, token) {
+            const t = getLocalTokens(); t[id] = token; localStorage.setItem('sr_tokens', JSON.stringify(t));
+        }
+        async function linkTripWithCode(id) {
+            const code = prompt('الصق هنا كود إدارة الرحلة اللي وصلك من الأدمن:');
+            if (!code) return;
+            const { data, error } = await sb.rpc('verify_trip_token', { p_id: id, p_token: code.trim() });
+            if (error || !data) { alert('الكود غير صحيح ❌'); return; }
+            saveLocalToken(id, code.trim());
+            alert('تم ربط الرحلة بجهازك ✅ دلوقتي تقدر تعدّل/تدير الرحلة دي من هنا.');
+            apiGetMyTrips();
+        }
+
+        window.onload = async function() {
             setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 2000);
             try {
                 sb = supabase.createClient(SB_URL, SB_KEY);
                 fillDropdowns();
+                await checkAdminSession();
                 trackVisit();
                 apiGetTrips();
                 const savedPhone = localStorage.getItem('sr_my_phone');
@@ -260,12 +292,22 @@
             } catch (e) { console.error(e); }
         };
 
+        async function checkAdminSession() {
+            const { data: { session } } = await sb.auth.getSession();
+            const navAdmin = document.getElementById('nav-admin');
+            if (session || location.hash === ADMIN_HASH) navAdmin.style.display = '';
+            if (session) {
+                document.getElementById('admin-auth').style.display = 'none';
+                document.getElementById('admin-panel').classList.remove('hidden');
+                loadAdminStats();
+                apiAdminReload();
+            }
+        }
+
         async function trackVisit() {
-            if (localStorage.getItem('is_share_ride_admin') === 'true') return;
-            try {
-                const { data } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
-                if(data) await sb.from('site_stats').update({ visit_count: data.visit_count + 1 }).eq('id', 1);
-            } catch (e) {}
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) return;
+            try { await sb.rpc('increment_visit_count'); } catch (e) {}
         }
 
         function uiTab(id) {
@@ -299,7 +341,7 @@
             const d = document.getElementById('f-d').value;
             const role = document.getElementById('f-user-identity').value;
 
-            const {data} = await sb.from('trips').select('*').eq('status', 'active').eq('user_role', role);
+            const {data} = await sb.from('trips').select(TRIP_COLS).eq('status', 'active').eq('user_role', role);
             if(data) {
                 data.sort((a, b) => LOCS.indexOf(a.origin) - LOCS.indexOf(b.origin));
                 let filtered = data;
@@ -326,7 +368,7 @@
             localStorage.setItem('sr_my_phone', p);
             const list = document.getElementById('list-mine');
             list.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل رحلاتك...</p>';
-            const {data} = await sb.from('trips').select('*').eq('whatsapp_number', '2'+p).neq('status', 'deleted').order('created_at', {ascending: false});
+            const {data} = await sb.from('trips').select(TRIP_COLS).eq('whatsapp_number', '2'+p).neq('status', 'deleted').order('created_at', {ascending: false});
             if(data) {
                 tripsMine = data;
                 if(data.length > 0) {
@@ -350,6 +392,7 @@
             if(!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
             const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
 
+            const token = genToken();
             const payload = {
                 user_role: document.getElementById('in-role').value, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
                 departure_time: h1 ? `${h1}:${document.getElementById('in-m1').value} ${document.getElementById('in-p1').value}` : '',
@@ -357,10 +400,18 @@
                 whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
                 seats_available: document.getElementById('in-role').value === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
                 has_ac: document.getElementById('in-ac').value === "true",
-                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active', joined_passengers: []
+                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active', joined_passengers: [],
+                edit_token: token
             };
-            const { error } = await sb.from('trips').insert([payload]);
-            if(!error) { alert('تم تسجيل مشوارك بنجاح! 🎉'); document.getElementById('postForm').reset(); uiTab('search'); }
+            const { data, error } = await sb.from('trips').insert([payload]).select('id').single();
+            if(!error && data) {
+                saveLocalToken(data.id, token);
+                alert('تم تسجيل مشوارك بنجاح! 🎉\nملحوظة: الرحلة اتربطت بجهازك ده تلقائي، فتقدر تعدّلها من قسم "رحلاتي" من نفس الجهاز.');
+                document.getElementById('postForm').reset(); uiTab('search');
+            } else if (error) {
+                alert('فشل النشر ❌: ' + error.message);
+                console.error(error);
+            }
             btn.disabled = false; btn.innerText = "نشر الآن 🚀";
         }
 
@@ -432,50 +483,66 @@
                 if(!phone || phone.length < 11) return alert('رقم واتساب غير صحيح (لازم يبدأ بـ 01 ويكون 11 رقم)');
                 payload.whatsapp_number = '2' + phone;
                 payload.user_role = document.getElementById('edit-role').value;
+
+                const { error } = await sb.from('trips').update(payload).eq('id', id);
+                if(error) { alert('فشل التحديث ❌: ' + error.message); console.error(error); return; }
+                alert('تم التحديث بنجاح ✅');
+                closeEdit(); apiAdminReload(); apiGetTrips();
+                return;
             }
 
-            const { error } = await sb.from('trips').update(payload).eq('id', id);
+            const token = getLocalToken(id);
+            if(!token) { alert('الرحلة دي مش مربوطة بجهازك. اضغط زرار 🔑 تحت الرحلة وحط كود الإدارة الأول.'); return; }
+            const { error } = await sb.rpc('update_trip_secure', { p_id: id, p_token: token, p_payload: payload });
             if(error) {
-                alert('فشل التحديث ❌: ' + error.message + '\n\nراجع صلاحيات UPDATE (RLS Policy) على جدول trips في Supabase.');
+                alert('فشل التحديث ❌: ' + error.message);
                 console.error(error);
                 return;
             }
             alert('تم التحديث بنجاح ✅');
             closeEdit();
-            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
+            apiGetMyTrips();
             apiGetTrips();
         }
 
-        async function apiAction(id, act, mode) {
+        async function tripAction(id, act, mode) {
             if(!confirm('تأكيد الإجراء؟')) return;
-            let error;
-            if(act === 'del') {
-                if(mode === 'admin') ({ error } = await sb.from('trips').delete().eq('id', id));
-                else ({ error } = await sb.from('trips').update({status: 'deleted'}).eq('id', id));
+            try {
+                if (mode === 'admin') {
+                    let error;
+                    if(act === 'delperm') ({ error } = await sb.from('trips').delete().eq('id', id));
+                    else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).eq('id', id));
+                    else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).eq('id', id));
+                    else if(act === 'del') ({ error } = await sb.from('trips').update({status: 'deleted'}).eq('id', id));
+                    if(error) throw error;
+                    apiAdminReload();
+                } else {
+                    const token = getLocalToken(id);
+                    if(!token) { alert('الرحلة دي مش مربوطة بجهازك. اضغط زرار 🔑 تحت الرحلة وحط كود الإدارة الأول.'); return; }
+                    const realStatus = act === 'done' ? 'completed' : act === 'del' ? 'deleted' : 'active';
+                    const { error } = await sb.rpc('set_trip_status_secure', { p_id: id, p_token: token, p_status: realStatus });
+                    if(error) throw error;
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل تنفيذ الإجراء ❌: ' + e.message);
+                console.error(e);
             }
-            else if(act === 'delperm') ({ error } = await sb.from('trips').delete().eq('id', id));
-            else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).eq('id', id));
-            else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).eq('id', id));
-            if(error) {
-                alert('فشل تنفيذ الإجراء ❌: ' + error.message + '\n\nراجع صلاحيات RLS على جدول trips في Supabase.');
-                console.error(error);
-                return;
-            }
-            if(mode === 'admin') apiAdminReload(); else apiGetMyTrips();
-            apiGetTrips();
         }
 
         async function joinAction(tripId, ownerPhone, origin, dest, ownerRole) {
             const p = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
             if(!p || p.length < 11) return alert("رقم غير صحيح");
             const newP = '0'+p.substring(p.length-10);
-            const { data: trip } = await sb.from('trips').select('joined_passengers, seats_available').eq('id', tripId).single();
-            let passengers = trip.joined_passengers || [];
-            if(ownerRole === 'captain' && passengers.length >= trip.seats_available) return alert("الرحلة اكتملت");
-            if(passengers.includes(newP)) return alert("أنت منضم بالفعل");
-            passengers.push(newP);
-            await sb.from('trips').update({ joined_passengers: passengers, status: (ownerRole==='captain' && passengers.length === trip.seats_available) ? 'completed' : 'active' }).eq('id', tripId);
-            
+            const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
+            if (error) {
+                if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
+                else if (error.message.includes('trip_full')) alert('الرحلة اكتملت');
+                else { alert('فشل الانضمام ❌: ' + error.message); console.error(error); }
+                return;
+            }
+
             let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
 
             // إعداد رابط الواتساب والزر في المودال
@@ -487,12 +554,28 @@
             apiGetTrips();
         }
 
-        async function removeJoiner(tripId, phoneToRemove) {
+        async function removeJoiner(tripId, phoneToRemove, mode) {
             if(!confirm('إزالة هذا المنضم؟')) return;
-            const { data: trip } = await sb.from('trips').select('joined_passengers').eq('id', tripId).single();
-            let passengers = (trip.joined_passengers || []).filter(p => p !== phoneToRemove);
-            await sb.from('trips').update({ joined_passengers: passengers, status: 'active' }).eq('id', tripId);
-            apiGetMyTrips(); apiGetTrips();
+            try {
+                if (mode === 'admin') {
+                    const { data: trip, error: e1 } = await sb.from('trips').select('joined_passengers').eq('id', tripId).single();
+                    if(e1) throw e1;
+                    const passengers = (trip.joined_passengers || []).filter(p => p !== phoneToRemove);
+                    const { error } = await sb.from('trips').update({ joined_passengers: passengers, status: 'active' }).eq('id', tripId);
+                    if(error) throw error;
+                    apiAdminReload();
+                } else {
+                    const token = getLocalToken(tripId);
+                    if(!token) { alert('الرحلة دي مش مربوطة بجهازك. اضغط زرار 🔑 تحت الرحلة الأول.'); return; }
+                    const { error } = await sb.rpc('remove_joiner_secure', { p_id: tripId, p_token: token, p_phone: phoneToRemove });
+                    if(error) throw error;
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل ❌: ' + e.message);
+                console.error(e);
+            }
         }
 
         function card(t, mode) {
@@ -510,11 +593,15 @@
             else if(hasDep) { tripType = '➡️ ذهاب فقط'; tripTypeClass = 'bg-sky-100 text-sky-700'; }
             else { tripType = '⬅️ عودة فقط'; tripTypeClass = 'bg-amber-100 text-amber-700'; }
 
+            const isAdminMode = mode === 'admin';
+            const isLinked = isAdminMode || !!getLocalToken(t.id);
             let manageUI;
-            if(isDeleted) {
-                manageUI = `<div class="grid grid-cols-2 gap-2 mt-2"><button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">♻️ استرجاع للمستخدم</button><button onclick="apiAction('${t.id}', 'delperm', '${mode}')" class="bg-red-600 text-white p-2 rounded-xl text-[9px] font-black">🗑️ حذف نهائي</button></div>`;
+            if (mode === 'my' && !isLinked) {
+                manageUI = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 mt-2 text-center"><p class="text-[10px] font-black text-amber-700 mb-2">🔒 الرحلة دي مش مربوطة بالجهاز ده، فمش هتقدر تعدّلها أو تحذفها من هنا (تقدر تتابعها بس).</p><button onclick="linkTripWithCode('${t.id}')" class="bg-amber-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">🔑 عندي كود إدارة الرحلة</button></div>`;
+            } else if(isDeleted) {
+                manageUI = `<div class="grid grid-cols-${isAdminMode ? 2 : 1} gap-2 mt-2"><button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">♻️ استرجاع</button>${isAdminMode ? `<button onclick="tripAction('${t.id}', 'delperm', '${mode}')" class="bg-red-600 text-white p-2 rounded-xl text-[9px] font-black">🗑️ حذف نهائي</button>` : ''}</div>`;
             } else {
-                manageUI = `<div class="grid grid-cols-3 gap-2 mt-2">${isDone ? `<button onclick="apiAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="apiAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}<button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button><button onclick="apiAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button></div>`;
+                manageUI = `<div class="grid grid-cols-3 gap-2 mt-2">${isDone ? `<button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="tripAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}<button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button><button onclick="tripAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button></div>`;
             }
 
             let btnUI = mode === 'public' ? (isCap ? `<div class="flex gap-2"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button></div>` : `<div class="flex gap-2 mt-1"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، أنا كابتن ومعايا عربية وشفت طلبك لرحلة ' + t.origin + ' وممكن أوصلك.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">تقديم عرض توصيل 🚗</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button></div>`) : manageUI;
@@ -522,21 +609,33 @@
             const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
             const deletedBadge = isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
 
-            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${t.origin} ⬅️ ${t.destination}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${t.price_per_seat || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${t.notes} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p>` : ''}</div><div>${btnUI}</div></div>`;
+            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${t.origin} ⬅️ ${t.destination}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${t.price_per_seat || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${t.notes} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p>` : ''}</div><div>${btnUI}</div></div>`;
         }
 
         async function apiAdminLogin() {
-            if(document.getElementById('admin-pass').value === 'Malika2017') {
-                localStorage.setItem('is_share_ride_admin', 'true');
-                document.getElementById('admin-auth').style.display = 'none';
-                document.getElementById('admin-panel').classList.remove('hidden');
-                const { data: stats } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
-                document.getElementById('visit-total').innerText = stats?.visit_count || 0;
-                const { count: capsCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'captain');
-                const { count: passCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'passenger');
-                document.getElementById('count-cap').innerText = capsCount || 0; document.getElementById('count-pas').innerText = passCount || 0;
-                apiAdminReload();
-            } else alert('خطأ');
+            const email = document.getElementById('admin-email').value.trim();
+            const pass = document.getElementById('admin-pass').value;
+            const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+            if (error) { alert('بيانات الدخول غير صحيحة ❌'); return; }
+            document.getElementById('admin-auth').style.display = 'none';
+            document.getElementById('admin-panel').classList.remove('hidden');
+            loadAdminStats();
+            apiAdminReload();
+        }
+
+        async function adminLogout() {
+            await sb.auth.signOut();
+            location.hash = '';
+            location.reload();
+        }
+
+        async function loadAdminStats() {
+            const { data: stats } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
+            document.getElementById('visit-total').innerText = stats?.visit_count || 0;
+            const { count: capsCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'captain');
+            const { count: passCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'passenger');
+            document.getElementById('count-cap').innerText = capsCount || 0;
+            document.getElementById('count-pas').innerText = passCount || 0;
         }
 
         async function apiAdminReload() {
@@ -564,53 +663,4 @@
         }
 
         function getSelectedTripIds() {
-            return Array.from(document.querySelectorAll('.admin-select-cb:checked')).map(cb => cb.value);
-        }
-
-        function updateBulkBar() {
-            const count = getSelectedTripIds().length;
-            const bar = document.getElementById('bulk-actions-bar');
-            if(bar) bar.style.display = count > 0 ? 'flex' : 'none';
-        }
-
-        async function bulkAction(act) {
-            const ids = getSelectedTripIds();
-            if(ids.length === 0) return;
-            const labels = { active: 'تنشيط', done: 'إكمال', delperm: 'حذف نهائي' };
-            if(!confirm(`تأكيد ${labels[act]} لعدد ${ids.length} رحلة؟`)) return;
-
-            let error;
-            if(act === 'delperm') ({ error } = await sb.from('trips').delete().in('id', ids));
-            else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).in('id', ids));
-            else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).in('id', ids));
-
-            if(error) {
-                alert('فشل تنفيذ الإجراء الجماعي ❌: ' + error.message);
-                console.error(error);
-                return;
-            }
-            apiAdminReload();
-            apiGetTrips();
-        }
-
-        function fillDropdowns() {
-            const dropdowns = ['in-o', 'in-d', 'f-o', 'f-d', 'edit-o', 'edit-d', 'admin-search-origin'];
-            dropdowns.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) {
-                    el.innerHTML = `<option value="">${id.includes('f-') || id.includes('admin') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
-                    LOCS.forEach(l => { el.innerHTML += `<option value="${l}">${l}</option>`; });
-                }
-            });
-
-            const hDropdowns = ['in-h1', 'in-h2', 'edit-h1', 'edit-h2'];
-            const mDropdowns = ['in-m1', 'in-m2', 'edit-m1', 'edit-m2'];
-            const hPlaceholders = { 'in-h1': 'بدون ذهاب', 'in-h2': 'بدون عودة', 'edit-h1': 'بدون ذهاب', 'edit-h2': 'بدون عودة' };
-            const hoursHtml = Array.from({length:12}, (_,i)=>(i+1).toString().padStart(2,'0')).map(h=>`<option value="${h}">${h}</option>`).join('');
-            const mHtml = ['00','15','30','45'].map(m=>`<option value="${m}">${m}</option>`).join('');
-            hDropdowns.forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = `<option value="">${hPlaceholders[id]}</option>` + hoursHtml; });
-            mDropdowns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = mHtml; });
-        }
-    </script>
-</body>
-</html>
+            return Arra
