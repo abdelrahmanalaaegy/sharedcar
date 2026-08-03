@@ -695,16 +695,17 @@
                 removeJoinedTripLocal(t.id); // بيانات قديمة على الجهاز، اتشال من الرحلة فعليًا
             }
 
-            const leaveBtn = `<button onclick="leaveTrip('${t.id}')" class="flex-1 text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة</button>`;
+            const leaveBtnCaptain = `<button onclick="leaveTrip('${t.id}')" class="flex-1 text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚫 إلغاء الحجز</button>`;
+            const leaveBtnGroup = `<button onclick="leaveTrip('${t.id}')" class="flex-1 text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة</button>`;
             let btnUI;
             if (mode === 'public') {
                 if (isCap) {
                     const inquiryLink = `<a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' عبر ShareRide وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a>`;
-                    const actionBtn = alreadyJoined ? leaveBtn : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button>`;
+                    const actionBtn = alreadyJoined ? leaveBtnCaptain : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button>`;
                     btnUI = `<div class="flex gap-2">${inquiryLink}${actionBtn}</div>`;
                 } else {
                     const offerLink = `<a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، شفت رحلتك من ' + t.origin + ' عبر ShareRide وحابب أتواصل معاك بخصوصها.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">كلمني 💬</a>`;
-                    const actionBtn = alreadyJoined ? leaveBtn : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button>`;
+                    const actionBtn = alreadyJoined ? leaveBtnGroup : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button>`;
                     btnUI = `<div class="flex gap-2 mt-1">${offerLink}${actionBtn}</div>`;
                 }
             } else {
