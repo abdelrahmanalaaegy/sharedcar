@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ShareRide App</title>
+
+    <!-- PWA & Mobile Optimization -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00a884">
+    <link rel="apple-touch-icon" href="logo.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; padding-bottom: 95px; -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .nav-btn.active { color: #00a884; font-weight: 900; }
+        .nav-btn.active::after { content: ''; display: block; width: 15px; height: 4px; background: #00a884; margin: 2px auto; border-radius: 10px; }
+
+        .form-input { width: 100%; padding: 15px; border-radius: 20px; border: 1px solid #e2e8f0; outline: none; background: white; font-size: 14px; font-weight: 700; text-align: center; transition: 0.3s; }
+        .form-input:focus { border-color: #00a884; box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.1); }
+        
+        /* تصميم الكارت المعتمد والمصلح */
+        .trip-card { background: white; border-radius: 30px; padding: 20px; margin-bottom: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px; position: relative; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .main-info { flex: 1; min-width: 0; }
+        .side-info { display: flex; flex-direction: column; align-items: center; min-width: 75px; text-align: center; }
+        
+        .role-badge { padding: 5px 12px; border-radius: 10px; font-size: 9px; font-weight: 900; color: white; width: 100%; }
+        .price-text { font-size: 11px; font-weight: 900; color: #00a884; margin-top: 8px; line-height: 1.2; } /* مسافة 2 مللي */
+        
+        .btn-green { background: #00a884; color: white; border-radius: 22px; font-weight: 800; width: 100%; padding: 16px; transition: 0.2s; text-align: center; cursor: pointer; border:none; box-shadow: 0 8px 15px rgba(0,168,132,0.2); }
+        .btn-green:active { transform: scale(0.96); }
+        .btn-blue { background: #2563eb; color: white; border-radius: 20px; font-weight: 800; width: 100%; padding: 16px; box-shadow: 0 8px 15px rgba(37, 99, 235, 0.2); }
+        .btn-outline { border: 2.5px solid #00a884; color: #00a884; border-radius: 20px; font-weight: 800; width: 100%; padding: 14px; font-size: 12px; text-align: center; }
+        
+        .feature-badge { background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 10px; font-size: 10px; font-weight: 900; }
+        .content-fade { opacity: 0.4; filter: grayscale(1); }
+        .route-header { background: #cbd5e1; color: #1e293b; padding: 10px 20px; border-radius: 18px; font-size: 12px; font-weight: 900; margin: 25px 0 15px 0; display: block; text-align: center; border: 1px solid #cbd5e1; position: sticky; top: var(--header-h, 76px); z-index: 40; }
+        
+        #loading-overlay { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .pulse { animation: pulse-anim 1.5s infinite; }
+        @keyframes pulse-anim { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; } }
+        
+        /* مودال التعديل */
+        #global-edit-form { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(5px); }
+        .edit-modal { background: #fffdf5; border: 3px solid #f59e0b; padding: 25px; border-radius: 40px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; text-align: right; }
+
+        .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #cbd5e1; }
+        .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 14px; flex: 1; min-width: 0; text-align: center; border:none; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+
+        .stat-box { background: #0b141a; color: white; padding: 15px; border-radius: 24px; text-align: center; border-bottom: 4px solid #00a884; }
+        .stat-red { background: #7f1d1d !important; border-bottom: 4px solid #ef4444 !important; }
+        .joined-list { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 15px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- شاشة التحميل -->
+    <div id="loading-overlay">
+        <h1 class="text-4xl font-black text-[#00a884] mb-2 italic">ShareRide</h1>
+        <p class="text-gray-400 font-bold pulse">جاري تشغيل المحرك... 🚗</p>
+    </div>
+
+    <!-- Navigation -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-[100] p-4 text-center border-b border-slate-100 rounded-b-[30px] shadow-sm">
+        <div class="flex justify-around items-center max-w-md mx-auto">
+            <button onclick="uiTab('home')" id="nav-home" class="nav-btn active flex flex-col items-center gap-1">
+                <span class="text-lg">🏠</span><span class="text-[9px]">الرئيسية</span>
+            </button>
+            <button onclick="uiTab('search')" id="nav-search" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">🔍</span><span class="text-[9px]">استكشاف</span>
+            </button>
+            <button onclick="uiTab('post')" id="nav-post" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">➕</span><span class="text-[9px]">سجل مشوارك</span>
+            </button>
+            <button onclick="uiTab('my')" id="nav-my" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">👤 رحلاتي</span>
+            </button>
+            <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn text-slate-400 flex flex-col items-center gap-1" style="display:none;">
+                <span class="text-lg">⚙️</span><span class="text-[9px]">الإدارة</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 min-h-screen">
+
+        <!-- 1. الصفحة الرئيسية -->
+        <div id="view-home" class="tab-content active space-y-6 text-center py-4">
+            <div class="py-10 px-6 bg-gradient-to-br from-[#00a884] to-[#128c7e] rounded-[3rem] text-white shadow-2xl text-right">
+                <h2 class="text-3xl font-black mb-3 tracking-tighter">مشوارك الثابت.. بأمان والتزام!</h2>
+                <p class="text-sm font-bold opacity-90 leading-relaxed mb-8">نسّق رحلاتك اليومية والشهرية مباشرة مع جيرانك وكباتن موثوقين من مجتمعك، بتكلفة أقل من تطبيقات النقل الذكي وبأمان تام.</p>
+                <div class="flex gap-2">
+                    <button onclick="uiTab('post')" class="flex-1 bg-white text-[#00a884] py-4 rounded-2xl font-black shadow-lg">سجل مشوارك ➕</button>
+                    <button onclick="uiTab('search')" class="flex-1 bg-black/20 text-white py-4 rounded-2xl font-black border border-white/30">ابحث عن رحلة 🔍</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm text-right">
+                    <div class="text-2xl mb-2">🛡️</div>
+                    <h4 class="font-black text-xs text-[#00a884]">أمان وراحة</h4>
+                    <p class="text-[10px] text-slate-500 font-bold mt-1">التزام تام بالمواعيد ورحلات مريحة مع جيرانك.</p>
+                </div>
+                <div class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm text-right">
+                    <div class="text-2xl mb-2">🗓️</div>
+                    <h4 class="font-black text-xs text-orange-500">رحلات شهرية</h4>
+                    <p class="text-[10px] text-slate-500 font-bold mt-1">تنسيق رحلات دورية مستقرة تريح بالك من زحمة كل يوم.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. البحث -->
+        <div id="view-search" class="tab-content text-center">
+            <div class="bg-white p-5 rounded-[2.2rem] mb-6 border shadow-sm">
+                <div class="bg-gray-100 p-1 rounded-xl flex gap-1 mb-3">
+                    <button onclick="uiSearchSwitch('captain')" id="search-role-cap" class="flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm">🚗 رحلات الكباتن</button>
+                    <button onclick="uiSearchSwitch('passenger')" id="search-role-pas" class="flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500">🙋‍♂️ رحلات الركاب</button>
+                </div>
+                <input type="hidden" id="f-user-identity" value="captain">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="f-o" onchange="apiGetTrips()" class="form-input text-xs"></select>
+                    <select id="f-d" onchange="apiGetTrips()" class="form-input text-xs"></select>
+                </div>
+                <p id="top-guide-banner" class="text-[10px] text-gray-400 font-bold italic">ملقيتش رحلة في طريقك؟ سجل مشوارك دلوقتي!</p>
+            </div>
+            <div id="list-public"></div>
+        </div>
+
+        <!-- 3. النشر -->
+        <div id="view-post" class="tab-content">
+            <div class="bg-white p-5 rounded-[2.2rem] border shadow-sm">
+                <form id="postForm" onsubmit="apiPost(event)" class="space-y-4 text-right">
+                    <h2 class="text-center font-black text-[#00a884] text-lg italic pr-2">سجل مشوارك 📝</h2>
+                    <div class="flex bg-gray-100 p-1 rounded-xl">
+                        <button type="button" id="role-cap" onclick="uiRole('captain')" class="flex-1 py-3 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm">أنا كابتن 🚗</button>
+                        <button type="button" id="role-pas" onclick="uiRole('passenger')" class="flex-1 py-3 rounded-lg font-bold text-xs text-gray-500">أنا راكب 🙋‍♂️</button>
+                    </div>
+                    <input type="hidden" id="in-role" value="captain">
+                    <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-o" required class="form-input border-emerald-500/20"></select><select id="in-d" required class="form-input border-emerald-500/20"></select></div>
+                    <div class="space-y-4 border-t pt-4">
+                        <div class="time-select-group"><select id="in-h1"><option value="">بدون ذهاب</option></select><span>:</span><select id="in-m1"></select><select id="in-p1"><option>صباحاً</option><option>مساءً</option></select></div>
+                        <div class="time-select-group"><select id="in-h2"><option value="">بدون عودة</option></select><span>:</span><select id="in-m2"></select><select id="in-p2"><option>مساءً</option><option>صباحاً</option></select></div>
+                        <p class="text-[10px] text-gray-400 font-bold text-center leading-relaxed">🔔 لو رحلتك ذهاب بس سيب "عودة" فاضي، ولو عودة بس سيب "ذهاب" فاضي، أو املا الاتنين لو رايح وجاي.</p>
+                    </div>
+                    <div id="cap-box" class="space-y-4 border-t pt-4">
+                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="السعر لليوم" class="form-input text-center"></div>
+                        <select id="in-ac" class="form-input text-xs font-black"><option value="true">✅ السيارة مكيفة</option><option value="false">❌ بدون تكييف</option></select>
+                    </div>
+                    <textarea id="in-notes" placeholder="ملاحظات إضافية (الشنط، المواعيد...)" class="form-input h-20 mb-3 font-bold text-right resize-none"></textarea>
+                    <input type="tel" id="in-phone" required placeholder="رقم واتسابك 01..." class="form-input text-center font-black border-2 border-[#00a884] text-lg">
+                    <button type="submit" id="btn-pub" class="btn-green p-4 text-xl font-black italic shadow-lg">نشر المشوار الآن 🚀</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 4. رحلاتي -->
+        <div id="view-my" class="tab-content text-center">
+            <div class="bg-white p-7 rounded-[2.5rem] border-2 border-black mb-6 shadow-sm">
+                <h2 class="font-black mb-3 italic text-xl">إدارة رحلاتي 👤</h2>
+                <input type="tel" id="my-phone" placeholder="01xxxxxxxxx" class="form-input text-center mb-4 font-black border-slate-300">
+                <button onclick="apiGetMyTrips()" class="w-full bg-black text-white p-4 rounded-2xl font-black active:scale-95 shadow-lg">دخول 🔓</button>
+                <button onclick="myLogout()" class="w-full text-gray-400 text-[11px] font-bold underline mt-3">مش أنا؟ غيّر الرقم</button>
+            </div>
+            <div id="list-mine"></div>
+        </div>
+
+        <!-- 5. الإدارة -->
+        <div id="view-admin" class="tab-content text-center">
+            <div id="admin-auth" class="bg-white p-8 rounded-3xl border shadow-sm space-y-3">
+                <input type="email" id="admin-email" placeholder="الإيميل" autocomplete="username" class="form-input text-center border-2">
+                <input type="password" id="admin-pass" placeholder="كلمة المرور" autocomplete="current-password" class="form-input text-center border-2">
+                <button onclick="apiAdminLogin()" class="w-full bg-black text-white p-4 rounded-2xl font-black">دخول المدير</button>
+            </div>
+            <div id="admin-panel" class="hidden">
+                <button onclick="adminLogout()" class="w-full bg-gray-200 text-gray-600 p-3 rounded-2xl font-black text-xs mb-4">🚪 خروج من حساب الأدمن</button>
+                <div class="grid grid-cols-1 gap-3 mb-6 text-center">
+                    <div class="stat-box"><p class="text-[10px] opacity-70 font-black text-white">الزيارات</p><h2 id="visit-total" class="text-3xl font-black text-[#00a884]">0</h2></div>
+                    <div class="grid grid-cols-2 gap-3"><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">كباتن</p><h2 id="count-cap" class="text-xl text-white font-black">0</h2></div><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">ركاب</p><h2 id="count-pas" class="text-xl text-white font-black">0</h2></div></div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm text-right">
+                    <input type="tel" id="admin-search-phone" oninput="apiAdminReload()" placeholder="بحث برقم الهاتف..." class="form-input font-bold">
+                    <select id="admin-search-origin" onchange="apiAdminReload()" class="form-input font-bold text-xs mt-2"></select>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border mb-3 shadow-sm flex items-center justify-between gap-2">
+                    <label class="flex items-center gap-2 text-[11px] font-black text-gray-600"><input type="checkbox" id="admin-select-all" onchange="toggleSelectAll(this)" class="w-4 h-4 accent-[#00a884]"> تحديد الكل</label>
+                    <div id="bulk-actions-bar" class="gap-1" style="display:none;">
+                        <button onclick="bulkAction('active')" class="bg-green-600 text-white px-2 py-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>
+                        <button onclick="bulkAction('done')" class="bg-black text-white px-2 py-2 rounded-xl text-[9px] font-black">✅ إكمال</button>
+                        <button onclick="bulkAction('delperm')" class="bg-red-600 text-white px-2 py-2 rounded-xl text-[9px] font-black">🗑️ حذف نهائي</button>
+                    </div>
+                </div>
+                <div id="list-admin"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal التعديل المصلح تماماً -->
+    <div id="global-edit-form">
+        <div class="edit-modal shadow-2xl space-y-4">
+            <h3 class="font-black text-center text-amber-800 italic text-xl border-b border-amber-200 pb-2">📝 تعديل الرحلة</h3>
+            <input type="hidden" id="edit-id"><input type="hidden" id="edit-mode">
+            <div id="edit-admin-area" class="hidden space-y-2 bg-red-50 border border-red-200 rounded-2xl p-3">
+                <p class="text-[10px] font-black text-red-600 text-center">🔑 صلاحيات الأدمن</p>
+                <select id="edit-role" onchange="toggleEditCapArea()" class="form-input font-bold text-xs border-red-200"><option value="captain">كابتن 🚗</option><option value="passenger">راكب 🙋‍♂️</option></select>
+                <input type="tel" id="edit-phone" placeholder="رقم واتساب الناشر 01xxxxxxxxx" class="form-input text-center font-black border-red-200">
+            </div>
+            <select id="edit-o" class="form-input font-bold text-xs border-amber-200"></select>
+            <select id="edit-d" class="form-input font-bold text-xs border-amber-200"></select>
+            <div class="space-y-3">
+                <div class="time-select-group"><select id="edit-h1"></select><span>:</span><select id="edit-m1"></select><select id="edit-p1"><option>صباحاً</option><option>مساءً</option></select></div>
+                <div class="time-select-group"><select id="edit-h2"></select><span>:</span><select id="edit-m2"></select><select id="edit-p2"><option>مساءً</option><option>صباحاً</option></select></div>
+            </div>
+            <div id="edit-cap-area">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="edit-price" placeholder="السعر" class="form-input text-xs font-black border-amber-200 text-center">
+                    <select id="edit-seats" class="form-input text-xs font-black border-amber-200"><option value="1">1 مقعد</option><option value="2">2 مقعد</option><option value="3">3 مقاعد</option><option value="4">4 مقاعد</option></select>
+                </div>
+                <select id="edit-ac" class="form-input text-xs font-black mt-2 border-amber-200"><option value="true">✅ مكيفة</option><option value="false">❌ بدون تكييف</option></select>
+            </div>
+            <textarea id="edit-notes" class="form-input h-24 text-xs font-bold text-right border-amber-200" placeholder="الملاحظات"></textarea>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-4 rounded-2xl font-black shadow-lg">حفظ التغييرات ✅</button>
+                <button onclick="closeEdit()" class="bg-gray-400 text-white p-4 rounded-2xl font-black">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال النجاح والواتساب الصاروخي -->
+    <div id="join-success-modal" class="hidden fixed inset-0 z-[600] bg-black/80 flex items-center justify-center p-6 text-center">
+        <div class="bg-white rounded-[3rem] p-8 max-w-sm w-full space-y-5 shadow-2xl border-4 border-[#00a884]">
+            <div class="text-5xl animate-bounce">✅</div>
+            <h2 id="modal-title" class="font-black text-xl text-slate-800">تم بنجاح!</h2>
+            <p id="modal-desc" class="text-gray-500 font-bold text-sm leading-relaxed"></p>
+            <button id="direct-wa-btn" class="btn-green py-5 text-md font-black shadow-emerald-200 w-full">إبلاغ الطرف الآخر واتساب 💬</button>
+            <button onclick="document.getElementById('join-success-modal').classList.add('hidden')" class="text-gray-400 font-bold text-xs underline">إغلاق</button>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
+        let sb;
+        const LOCS = ["أكتوبر", "الشيخ زايد", "القرية الذكية", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "أرض اللواء", "ميدان لبنان", "المهندسين", "الدقي", "الكيت كات", "إمبابة", "المعادي", "زهراء المعادي", "المقطم", "المنيل", "جاردن سيتي", "مصر القديمة", "وسط البلد ومحيطها", "حلوان", "البدرشين", "شبرا مصر", "الساحل", "شبرا الخيمة", "مدينة نصر", "مصر الجديدة", "المطرية", "عين شمس", "المرج", "المرج الجديدة", "جسر السويس", "النزهة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "مدينة بدر", "العبور", "العاشر من رمضان", "العاصمة الإدارية"];
+        let tripsPublic = [];
+        let tripsMine = [];
+        let tripsAdmin = [];
+
+        // فقط الأعمدة العامة المسموح لغير المسجلين يشوفوها (mgmt_code مش موجود هنا عشان محدش يقدر يسرقه)
+        const TRIP_COLS = "id,user_role,origin,destination,departure_time,return_time,whatsapp_number,notes,seats_available,price_per_seat,has_ac,status,joined_passengers,created_at";
+        // رابط سري لإظهار تاب الإدارة (غيّره لأي حاجة تحبها، وافتح الرابط + #owner-access مرة واحدة من جهازك)
+        const ADMIN_HASH = '#owner-access';
+
+        function genToken() {
+            if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+            return 'tk' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        function getLocalTokens() {
+            try { return JSON.parse(localStorage.getItem('sr_tokens') || '{}'); } catch (e) { return {}; }
+        }
+        function getLocalToken(id) { return getLocalTokens()[id]; }
+        function saveLocalToken(id, token) {
+            const t = getLocalTokens(); t[id] = token; localStorage.setItem('sr_tokens', JSON.stringify(t));
+        }
+        function copyMgmtCode(code) {
+            navigator.clipboard.writeText(code).then(() => alert('تم نسخ الكود ✅')).catch(() => prompt('انسخ الكود يدويًا:', code));
+        }
+
+        async function linkTripWithCode(id) {
+            const code = prompt('الصق هنا كود إدارة الرحلة اللي وصلك من الأدمن:');
+            if (!code) return;
+            const { data, error } = await sb.rpc('verify_trip_token', { p_id: id, p_token: code.trim() });
+            if (error || !data) { alert('الكود غير صحيح ❌'); return; }
+            saveLocalToken(id, code.trim());
+            alert('تم ربط الرحلة بجهازك ✅ دلوقتي تقدر تعدّل/تدير الرحلة دي من هنا.');
+            apiGetMyTrips();
+        }
+
+        function syncHeaderHeight() {
+            const header = document.querySelector('header');
+            if (header) document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+        }
+        window.addEventListener('resize', syncHeaderHeight);
+
+        window.onload = async function() {
+            setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 2000);
+            syncHeaderHeight();
+            try {
+                sb = supabase.createClient(SB_URL, SB_KEY);
+                fillDropdowns();
+                await checkAdminSession();
+                trackVisit();
+                apiGetTrips();
+                const savedPhone = localStorage.getItem('sr_my_phone');
+                if(savedPhone) document.getElementById('my-phone').value = savedPhone;
+            } catch (e) { console.error(e); }
+        };
+
+        async function checkAdminSession() {
+            const { data: { session } } = await sb.auth.getSession();
+            const navAdmin = document.getElementById('nav-admin');
+            if (session || location.hash === ADMIN_HASH) navAdmin.style.display = '';
+            if (session) {
+                document.getElementById('admin-auth').style.display = 'none';
+                document.getElementById('admin-panel').classList.remove('hidden');
+                loadAdminStats();
+                apiAdminReload();
+            }
+        }
+
+        async function trackVisit() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) return;
+            try { await sb.rpc('increment_visit_count'); } catch (e) {}
+        }
+
+        function uiTab(id) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('view-' + id).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'text-[#00a884]'));
+            document.getElementById('nav-' + id).classList.add('active');
+            if(id === 'search') apiGetTrips();
+            if(id === 'my') apiGetMyTrips();
+        }
+
+        function uiSearchSwitch(identity) {
+            document.getElementById('f-user-identity').value = identity;
+            document.getElementById('search-role-cap').className = identity === 'captain' ? "flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500";
+            document.getElementById('search-role-pas').className = identity === 'passenger' ? "flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500";
+            apiGetTrips();
+        }
+
+        function uiRole(r) {
+            document.getElementById('in-role').value = r;
+            const isCap = r === 'captain';
+            document.getElementById('cap-box').classList.toggle('hidden', !isCap);
+            document.getElementById('role-cap').className = isCap ? "flex-1 py-3 rounded-xl font-black text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-xl font-black text-xs text-gray-500";
+            document.getElementById('role-pas').className = !isCap ? "flex-1 py-3 rounded-xl font-black text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-xl font-black text-xs text-gray-500";
+        }
+
+        async function apiGetTrips() {
+            const list = document.getElementById('list-public');
+            list.innerHTML = '<p class="text-center py-20 text-gray-400 font-black italic">جاري البحث...</p>';
+            const o = document.getElementById('f-o').value;
+            const d = document.getElementById('f-d').value;
+            const role = document.getElementById('f-user-identity').value;
+
+            const {data} = await sb.from('trips').select(TRIP_COLS).eq('status', 'active').eq('user_role', role);
+            if(data) {
+                data.sort((a, b) => LOCS.indexOf(a.origin) - LOCS.indexOf(b.origin));
+                let filtered = data;
+                if(o) filtered = filtered.filter(t => t.origin === o);
+                if(d) filtered = filtered.filter(t => t.destination === d);
+                tripsPublic = filtered;
+                if(filtered.length > 0) {
+                    let html = ''; let lastRoute = "";
+                    filtered.forEach(t => {
+                        let route = `${t.origin} ⬅️ ${t.destination}`;
+                        if(route !== lastRoute) { html += `<div class="route-header">📍 مسار: ${route}</div>`; lastRoute = route; }
+                        html += card(t, 'public');
+                    });
+                    list.innerHTML = html;
+                } else {
+                    list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">✨</div><h3 class="text-[#00a884] font-black mb-3 text-xl">${role==='captain'?'مفيش كباتن؟':'مفيش ركاب؟'}</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك دلوقتي في القائمة، والناس هتلاقي طلبك وتتواصل معاك.</p><button onclick="uiTab('post'); uiRole('${role}');" class="btn-green w-full text-lg shadow-xl pulse-loading italic">سجل مشوارك الآن ➕</button></div>`;
+                }
+            }
+        }
+
+        async function apiGetMyTrips() {
+            const p = document.getElementById('my-phone').value;
+            if(!p || p.length < 10) return;
+            localStorage.setItem('sr_my_phone', p);
+            const list = document.getElementById('list-mine');
+            list.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل رحلاتك...</p>';
+            const {data} = await sb.from('trips').select(TRIP_COLS).eq('whatsapp_number', '2'+p).neq('status', 'deleted').order('created_at', {ascending: false});
+            if(data) {
+                tripsMine = data;
+                if(data.length > 0) {
+                    list.innerHTML = data.map(t => card(t, 'my')).join('');
+                } else {
+                    list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مسجلة بالرقم ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">تأكد إن الرقم صحيح، أو سجل مشوارك الأول دلوقتي.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
+                }
+            }
+        }
+
+        function myLogout() {
+            localStorage.removeItem('sr_my_phone');
+            document.getElementById('my-phone').value = '';
+            document.getElementById('list-mine').innerHTML = '';
+        }
+
+        async function apiPost(event) {
+            event.preventDefault();
+            const h1 = document.getElementById('in-h1').value;
+            const h2 = document.getElementById('in-h2').value;
+            if(!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
+            const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
+
+            const token = genToken();
+            const payload = {
+                user_role: document.getElementById('in-role').value, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
+                departure_time: h1 ? `${h1}:${document.getElementById('in-m1').value} ${document.getElementById('in-p1').value}` : '',
+                return_time: h2 ? `${h2}:${document.getElementById('in-m2').value} ${document.getElementById('in-p2').value}` : null,
+                whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
+                seats_available: document.getElementById('in-role').value === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
+                has_ac: document.getElementById('in-ac').value === "true",
+                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active', joined_passengers: [],
+                mgmt_code: token
+            };
+            const { data, error } = await sb.from('trips').insert([payload]).select('id').single();
+            if(!error && data) {
+                saveLocalToken(data.id, token);
+                alert('تم تسجيل مشوارك بنجاح! 🎉\nملحوظة: الرحلة اتربطت بجهازك ده تلقائي، فتقدر تعدّلها من قسم "رحلاتي" من نفس الجهاز.');
+                document.getElementById('postForm').reset(); uiTab('search');
+            } else if (error) {
+                alert('فشل النشر ❌: ' + error.message);
+                console.error(error);
+            }
+            btn.disabled = false; btn.innerText = "نشر الآن 🚀";
+        }
+
+        function openEdit(id, mode) {
+            const source = mode === 'admin' ? tripsAdmin : mode === 'my' ? tripsMine : tripsPublic;
+            const t = source.find(trip => trip.id === id);
+            if(!t) return alert("حدث خطأ في تحميل بيانات الرحلة، جرب تحدّث الصفحة");
+            const isAdmin = mode === 'admin';
+            const isCap = t.user_role === 'captain';
+            document.getElementById('edit-admin-area').classList.toggle('hidden', !isAdmin);
+            document.getElementById('edit-cap-area').style.display = isCap ? 'block' : 'none';
+            document.getElementById('global-edit-form').style.display = 'flex';
+            document.getElementById('edit-id').value = t.id;
+            document.getElementById('edit-mode').value = mode;
+            document.getElementById('edit-role').value = t.user_role;
+            document.getElementById('edit-phone').value = t.whatsapp_number ? t.whatsapp_number.replace(/^20/, '0') : '';
+            document.getElementById('edit-o').value = t.origin;
+            document.getElementById('edit-d').value = t.destination;
+            
+            if(t.departure_time && t.departure_time !== 'null') {
+                const p = t.departure_time.split(/[: ]/);
+                document.getElementById('edit-h1').value = p[0];
+                document.getElementById('edit-m1').value = p[1];
+                document.getElementById('edit-p1').value = p[2];
+            }
+            if(t.return_time && t.return_time !== 'null') {
+                const p = t.return_time.split(/[: ]/);
+                document.getElementById('edit-h2').value = p[0];
+                document.getElementById('edit-m2').value = p[1];
+                document.getElementById('edit-p2').value = p[2];
+            }
+
+            document.getElementById('edit-price').value = t.price_per_seat ? t.price_per_seat.replace(' ج.م', '') : '';
+            document.getElementById('edit-seats').value = t.seats_available;
+            document.getElementById('edit-ac').value = t.has_ac.toString();
+            document.getElementById('edit-notes').value = t.notes || '';
+        }
+
+        function closeEdit() { document.getElementById('global-edit-form').style.display = 'none'; }
+
+        function toggleEditCapArea() {
+            const isCap = document.getElementById('edit-role').value === 'captain';
+            document.getElementById('edit-cap-area').style.display = isCap ? 'block' : 'none';
+        }
+
+        async function saveEdit() {
+            const id = document.getElementById('edit-id').value;
+            const mode = document.getElementById('edit-mode').value;
+            const source = mode === 'admin' ? tripsAdmin : mode === 'my' ? tripsMine : tripsPublic;
+            const t = source.find(trip => trip.id === id);
+            const isAdmin = mode === 'admin';
+            const isCap = isAdmin ? (document.getElementById('edit-role').value === 'captain') : (t.user_role === 'captain');
+
+            const h1 = document.getElementById('edit-h1').value;
+            const h2 = document.getElementById('edit-h2').value;
+
+            const payload = {
+                origin: document.getElementById('edit-o').value, destination: document.getElementById('edit-d').value,
+                departure_time: h1 ? `${h1}:${document.getElementById('edit-m1').value} ${document.getElementById('edit-p1').value}` : '',
+                return_time: h2 ? `${h2}:${document.getElementById('edit-m2').value} ${document.getElementById('edit-p2').value}` : null,
+                price_per_seat: isCap ? (document.getElementById('edit-price').value ? document.getElementById('edit-price').value + " ج.م" : "") : "",
+                seats_available: isCap ? parseInt(document.getElementById('edit-seats').value) : 0,
+                has_ac: isCap ? (document.getElementById('edit-ac').value === "true") : false,
+                notes: document.getElementById('edit-notes').value
+            };
+
+            if(isAdmin) {
+                const phone = document.getElementById('edit-phone').value;
+                if(!phone || phone.length < 11) return alert('رقم واتساب غير صحيح (لازم يبدأ بـ 01 ويكون 11 رقم)');
+                payload.whatsapp_number = '2' + phone;
+                payload.user_role = document.getElementById('edit-role').value;
+
+                const { error } = await sb.from('trips').update(payload).eq('id', id);
+                if(error) { alert('فشل التحديث ❌: ' + error.message); console.error(error); return; }
+                alert('تم التحديث بنجاح ✅');
+                closeEdit(); apiAdminReload(); apiGetTrips();
+                return;
+            }
+
+            const token = getLocalToken(id);
+            if(!token) { alert('الرحلة دي مش مربوطة بجهازك. اضغط زرار 🔑 تحت الرحلة وحط كود الإدارة الأول.'); return; }
+            const { error } = await sb.rpc('update_trip_secure', { p_id: id, p_token: token, p_payload: payload });
+            if(error) {
+                alert('فشل التحديث ❌: ' + error.message);
+                console.error(error);
+                return;
+            }
+            alert('تم التحديث بنجاح ✅');
+            closeEdit();
+            apiGetMyTrips();
+            apiGetTrips();
+        }
+
+        async function tripAction(id, act, mode) {
+            if(!confirm('تأكيد الإجراء؟')) return;
+            try {
+                if (mode === 'admin') {
+                    let error;
+                    if(act === 'delperm') ({ error } = await sb.from('trips').delete().eq('id', id));
+                    else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).eq('id', id));
+                    else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).eq('id', id));
+                    else if(act === 'del') ({ error } = await sb.from('trips').update({status: 'deleted'}).eq('id', id));
+                    if(error) throw error;
+                    apiAdminReload();
+                } else {
+                    const token = getLocalToken(id);
+                    if(!token) { alert('الرحلة دي مش مربوطة بجهازك. اضغط زرار 🔑 تحت الرحلة وحط كود الإدارة الأول.'); return; }
+                    const realStatus = act === 'done' ? 'completed' : act === 'del' ? 'deleted' : 'active';
+                    const { error } = await sb.rpc('set_trip_status_secure', { p_id: id, p_token: token, p_status: realStatus });
+                    if(error) throw error;
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل تنفيذ الإجراء ❌: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        async function joinAction(tripId, ownerPhone, origin, dest, ownerRole) {
+            const p = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
+            if(!p || p.length < 11) return alert("رقم غير صحيح");
+            const newP = '0'+p.substring(p.length-10);
+            const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
+            if (error) {
+                if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
+                else if (error.message.includes('trip_full')) alert('الرحلة اكتملت');
+                else { alert('فشل الانضمام ❌: ' + error.message); console.error(error); }
+                return;
+            }
+
+            let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
+
+            // إعداد رابط الواتساب والزر في المودال
+            const waUrl = `https://api.whatsapp.com/send?phone=${ownerPhone}&text=${encodeURIComponent(msg)}`;
+            document.getElementById('direct-wa-btn').onclick = () => window.open(waUrl, '_blank');
+            document.getElementById('modal-title').innerText = ownerRole === 'captain' ? "تم الحجز مع الكابتن! ✅" : "تم الانضمام للمجموعة! 🤝";
+            document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
+            document.getElementById('join-success-modal').classList.remove('hidden');
+            apiGetTrips();
+        }
+
+        async function removeJoiner(tripId, phoneToRemove, mode) {
+            if(!confirm('إزالة هذا المنضم؟')) return;
+            try {
+                if (mode === 'admin') {
+                    const { data: trip, error: e1 } = await sb.from('trips').select('joined_passengers').eq('id', tripId).single();
+                    if(e1) throw e1;
+                    const passengers = (trip.joined_passengers || []).filter(p => p !== phoneToRemove);
+                    const { error } = await sb.from('trips').update({ joined_passengers: passengers, status: 'active' }).eq('id', tripId);
+                    if(error) throw error;
+                    apiAdminReload();
+                } else {
+                    const token = getLocalToken(tripId);
+                    if(!token) { alert('الرحلة دي مش مربوطة بجهازك. اضغط زرار 🔑 تحت الرحلة الأول.'); return; }
+                    const { error } = await sb.rpc('remove_joiner_secure', { p_id: tripId, p_token: token, p_phone: phoneToRemove });
+                    if(error) throw error;
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل ❌: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        function card(t, mode) {
+            const isCap = t.user_role === 'captain';
+            const isDone = t.status === 'completed';
+            const isDeleted = t.status === 'deleted';
+            const passengers = t.joined_passengers || [];
+            const displayPhone = t.whatsapp_number.replace(/^20/, '0');
+            const fadeClass = (isDone || isDeleted) ? 'content-fade' : '';
+
+            const hasDep = t.departure_time && t.departure_time !== 'null';
+            const hasRet = t.return_time && t.return_time !== 'null';
+            let tripType, tripTypeClass;
+            if(hasDep && hasRet) { tripType = '🔁 ذهاب وعودة'; tripTypeClass = 'bg-purple-100 text-purple-700'; }
+            else if(hasDep) { tripType = '➡️ ذهاب فقط'; tripTypeClass = 'bg-sky-100 text-sky-700'; }
+            else { tripType = '⬅️ عودة فقط'; tripTypeClass = 'bg-amber-100 text-amber-700'; }
+
+            const isAdminMode = mode === 'admin';
+            const isLinked = isAdminMode || !!getLocalToken(t.id);
+            let manageUI;
+            if (mode === 'my' && !isLinked) {
+                manageUI = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 mt-2 text-center"><p class="text-[10px] font-black text-amber-700 mb-2">🔒 الرحلة دي مش مربوطة بالجهاز ده، فمش هتقدر تعدّلها أو تحذفها من هنا (تقدر تتابعها بس).</p><button onclick="linkTripWithCode('${t.id}')" class="bg-amber-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">🔑 عندي كود إدارة الرحلة</button></div>`;
+            } else if(isDeleted) {
+                manageUI = `<div class="grid grid-cols-${isAdminMode ? 2 : 1} gap-2 mt-2"><button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">♻️ استرجاع</button>${isAdminMode ? `<button onclick="tripAction('${t.id}', 'delperm', '${mode}')" class="bg-red-600 text-white p-2 rounded-xl text-[9px] font-black">🗑️ حذف نهائي</button>` : ''}</div>`;
+            } else {
+                manageUI = `<div class="grid grid-cols-3 gap-2 mt-2">${isDone ? `<button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="tripAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}<button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button><button onclick="tripAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button></div>`;
+            }
+
+            let btnUI = mode === 'public' ? (isCap ? `<div class="flex gap-2"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button></div>` : `<div class="flex gap-2 mt-1"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، أنا كابتن ومعايا عربية وشفت طلبك لرحلة ' + t.origin + ' وممكن أوصلك.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">تقديم عرض توصيل 🚗</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button></div>`) : manageUI;
+
+            const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
+            const deletedBadge = isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
+
+            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${t.origin} ⬅️ ${t.destination}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${t.price_per_seat || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${t.notes} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${t.mgmt_code || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}</div><div>${btnUI}</div></div>`;
+        }
+
+        async function apiAdminLogin() {
+            const email = document.getElementById('admin-email').value.trim();
+            const pass = document.getElementById('admin-pass').value;
+            const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+            if (error) { alert('بيانات الدخول غير صحيحة ❌'); return; }
+            document.getElementById('admin-auth').style.display = 'none';
+            document.getElementById('admin-panel').classList.remove('hidden');
+            loadAdminStats();
+            apiAdminReload();
+        }
+
+        async function adminLogout() {
+            await sb.auth.signOut();
+            location.hash = '';
+            location.reload();
+        }
+
+        async function loadAdminStats() {
+            const { data: stats } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
+            document.getElementById('visit-total').innerText = stats?.visit_count || 0;
+            const { count: capsCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'captain');
+            const { count: passCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'passenger');
+            document.getElementById('count-cap').innerText = capsCount || 0;
+            document.getElementById('count-pas').innerText = passCount || 0;
+        }
+
+        async function apiAdminReload() {
+            const phone = document.getElementById('admin-search-phone').value.trim();
+            const origin = document.getElementById('admin-search-origin').value;
+
+            let q = sb.from('trips').select('*');
+            if(phone) q = q.ilike('whatsapp_number', `%${phone.replace(/^0/, '')}%`);
+            if(origin) q = q.eq('origin', origin);
+
+            const {data} = await q;
+            if(data) {
+                data.sort((a, b) => LOCS.indexOf(a.origin) - LOCS.indexOf(b.origin));
+                tripsAdmin = data;
+                document.getElementById('list-admin').innerHTML = data.length > 0 ? data.map(t => card(t, 'admin')).join('') : `<p class="text-center py-16 text-gray-400 font-black italic">مفيش رحلات مطابقة للبحث</p>`;
+                const selectAll = document.getElementById('admin-select-all');
+                if(selectAll) selectAll.checked = false;
+                updateBulkBar();
+            }
+        }
+
+        function toggleSelectAll(el) {
+            document.querySelectorAll('.admin-select-cb').forEach(cb => cb.checked = el.checked);
+            updateBulkBar();
+        }
+
+        function getSelectedTripIds() {
+            return Array.from(document.querySelectorAll('.admin-select-cb:checked')).map(cb => cb.value);
+        }
+
+        function updateBulkBar() {
+            const count = getSelectedTripIds().length;
+            const bar = document.getElementById('bulk-actions-bar');
+            if(bar) bar.style.display = count > 0 ? 'flex' : 'none';
+        }
+
+        async function bulkAction(act) {
+            const ids = getSelectedTripIds();
+            if(ids.length === 0) return;
+            const labels = { active: 'تنشيط', done: 'إكمال', delperm: 'حذف نهائي' };
+            if(!confirm(`تأكيد ${labels[act]} لعدد ${ids.length} رحلة؟`)) return;
+
+            let error;
+            if(act === 'delperm') ({ error } = await sb.from('trips').delete().in('id', ids));
+            else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).in('id', ids));
+            else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).in('id', ids));
+
+            if(error) {
+                alert('فشل تنفيذ الإجراء الجماعي ❌: ' + error.message);
+                console.error(error);
+                return;
+            }
+            apiAdminReload();
+            apiGetTrips();
+        }
+
+        function fillDropdowns() {
+            const dropdowns = ['in-o', 'in-d', 'f-o', 'f-d', 'edit-o', 'edit-d', 'admin-search-origin'];
+            dropdowns.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.innerHTML = `<option value="">${id.includes('f-') || id.includes('admin') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
+                    LOCS.forEach(l => { el.innerHTML += `<option value="${l}">${l}</option>`; });
+                }
+            });
+
+            const hDropdowns = ['in-h1', 'in-h2', 'edit-h1', 'edit-h2'];
+            const mDropdowns = ['in-m1', 'in-m2', 'edit-m1', 'edit-m2'];
+            const hPlaceholders = { 'in-h1': 'بدون ذهاب', 'in-h2': 'بدون عودة', 'edit-h1': 'بدون ذهاب', 'edit-h2': 'بدون عودة' };
+            const hoursHtml = Array.from({length:12}, (_,i)=>(i+1).toString().padStart(2,'0')).map(h=>`<option value="${h}">${h}</option>`).join('');
+            const mHtml = ['00','15','30','45'].map(m=>`<option value="${m}">${m}</option>`).join('');
+            hDropdowns.forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = `<option value="">${hPlaceholders[id]}</option>` + hoursHtml; });
+            mDropdowns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = mHtml; });
+        }
+    </script>
+</body>
+</html>
