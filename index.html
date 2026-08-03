@@ -44,9 +44,8 @@
         .content-fade { opacity: 0.4; filter: grayscale(1); }
         .route-header { background: #cbd5e1; color: #1e293b; padding: 10px 20px; border-radius: 18px; font-size: 12px; font-weight: 900; margin: 25px 0 15px 0; display: block; text-align: center; border: 1px solid #cbd5e1; }
 
-        /* مؤشر المسار العائم - بيظهر وانت نازل بس ويختفي لما تقف */
-        #route-indicator { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px); background: #cbd5e1; color: #1e293b; padding: 10px 22px; border-radius: 18px; font-size: 12px; font-weight: 900; box-shadow: 0 6px 14px rgba(0,0,0,0.1); z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
-        #route-indicator.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        /* شريط الفلاتر (كابتن/راكب + المناطق) - بيلزق تحت الهيدر وهو اللي يتحرك مع اسكرول */
+        #search-filter-bar { position: sticky; top: var(--header-h, 76px); z-index: 90; }
 
         /* زرار الرجوع لفوق */
         #scroll-top-btn { position: fixed; bottom: 90px; right: 18px; width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,168,132,0.35); border: none; z-index: 200; opacity: 0; transform: translateY(15px) scale(0.8); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
@@ -127,7 +126,7 @@
 
         <!-- 2. البحث -->
         <div id="view-search" class="tab-content text-center">
-            <div class="bg-white p-5 rounded-[2.2rem] mb-6 border shadow-sm">
+            <div id="search-filter-bar" class="bg-white p-5 rounded-[2.2rem] mb-6 border shadow-sm">
                 <div class="bg-gray-100 p-1 rounded-xl flex gap-1 mb-3">
                     <button onclick="uiSearchSwitch('captain')" id="search-role-cap" class="flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm">🚗 رحلات الكباتن</button>
                     <button onclick="uiSearchSwitch('passenger')" id="search-role-pas" class="flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500">🙋‍♂️ رحلات الركاب</button>
@@ -210,9 +209,6 @@
         </div>
 
     </main>
-
-    <!-- مؤشر المسار العائم -->
-    <div id="route-indicator"></div>
 
     <!-- زرار الرجوع لفوق -->
     <button id="scroll-top-btn" onclick="scrollToTop()" aria-label="الرجوع لفوق">
@@ -306,38 +302,18 @@
         }
         window.addEventListener('resize', syncHeaderHeight);
 
-        // مؤشر المسار العائم وزرار الرجوع لفوق
+        // زرار الرجوع لفوق
         let scrollStopTimer;
         const scrollTopBtn = () => document.getElementById('scroll-top-btn');
-        const routeIndicator = () => document.getElementById('route-indicator');
-
-        function updateRouteIndicator() {
-            const indicator = routeIndicator();
-            if (!indicator) return;
-            const headers = document.querySelectorAll('#view-search.active .route-header');
-            if (!headers.length) { indicator.classList.remove('show'); return; }
-            const headerH = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 76) + 10;
-            let current = null;
-            headers.forEach(h => { if (h.getBoundingClientRect().top <= headerH) current = h; });
-            if (current) {
-                indicator.textContent = current.textContent;
-                indicator.classList.add('show');
-            } else {
-                indicator.classList.remove('show');
-            }
-        }
 
         window.addEventListener('scroll', () => {
-            // وانت بتنزل: يبان مؤشر المسار ويختفي السهم
-            updateRouteIndicator();
+            // وانت بتنزل: يختفي السهم
             const btn = scrollTopBtn();
             if (btn) btn.classList.remove('show');
 
             clearTimeout(scrollStopTimer);
             scrollStopTimer = setTimeout(() => {
-                // لما توقف: يختفي مؤشر المسار ويظهر السهم
-                const indicator = routeIndicator();
-                if (indicator) indicator.classList.remove('show');
+                // لما توقف: يظهر السهم
                 if (btn && window.scrollY > 250) btn.classList.add('show');
             }, 220);
         }, { passive: true });
