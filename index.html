@@ -91,6 +91,10 @@
             <button onclick="uiTab('my')" id="nav-my" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
                 <span class="text-lg">👤 رحلاتي</span>
             </button>
+            <button onclick="openNotifications()" id="nav-notif" class="relative text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">🔔</span><span class="text-[9px]">إشعارات</span>
+                <span id="notif-badge" class="hidden absolute -top-1 left-2 bg-red-600 text-white text-[9px] font-black rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">0</span>
+            </button>
             <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn text-slate-400 flex flex-col items-center gap-1" style="display:none;">
                 <span class="text-lg">⚙️</span><span class="text-[9px]">الإدارة</span>
             </button>
@@ -100,28 +104,99 @@
     <main class="max-w-md mx-auto p-4 min-h-screen">
 
         <!-- 1. الصفحة الرئيسية -->
-        <div id="view-home" class="tab-content active space-y-6 text-center py-4">
-            <div class="py-10 px-6 bg-gradient-to-br from-[#00a884] to-[#128c7e] rounded-[3rem] text-white shadow-2xl text-right">
-                <h2 class="text-3xl font-black mb-3 tracking-tighter">مشوارك الثابت.. بأمان والتزام!</h2>
-                <p class="text-sm font-bold opacity-90 leading-relaxed mb-8">نسّق رحلاتك اليومية والشهرية مباشرة مع جيرانك وكباتن موثوقين من مجتمعك، بتكلفة أقل من تطبيقات النقل الذكي وبأمان تام.</p>
-                <div class="flex gap-2">
-                    <button onclick="uiTab('post')" class="flex-1 bg-white text-[#00a884] py-4 rounded-2xl font-black shadow-lg">سجل مشوارك ➕</button>
-                    <button onclick="uiTab('search')" class="flex-1 bg-black/20 text-white py-4 rounded-2xl font-black border border-white/30">ابحث عن رحلة 🔍</button>
+        <div id="view-home" class="tab-content active py-2">
+
+            <!-- HERO -->
+            <div class="py-9 px-6 bg-gradient-to-br from-[#00a884] to-[#128c7e] rounded-[2.5rem] text-white shadow-xl text-right">
+                <h1 class="text-2xl font-black mb-3 leading-snug tracking-tight">يمكن المشوار اللي بتدور عليه موجود هنا 🚗</h1>
+                <p class="text-[13px] font-bold opacity-90 leading-relaxed mb-7">رحلات متكررة للشغل والدراسة والمشاوير اليومية.<br>ابحث عن رحلة أو سجل مشوارك، وشوف الخيارات المتاحة.</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="uiTab('search')" class="w-full bg-white text-[#00a884] py-4 rounded-2xl font-black shadow-lg text-sm">🔎 ابحث عن رحلة</button>
+                    <button onclick="uiTab('post')" class="w-full bg-black/15 text-white py-4 rounded-2xl font-black border border-white/30 text-sm">➕ سجل مشوارك</button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm text-right">
-                    <div class="text-2xl mb-2">🛡️</div>
-                    <h4 class="font-black text-xs text-[#00a884]">أمان وراحة</h4>
-                    <p class="text-[10px] text-slate-500 font-bold mt-1">التزام تام بالمواعيد ورحلات مريحة مع جيرانك.</p>
-                </div>
-                <div class="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm text-right">
-                    <div class="text-2xl mb-2">🗓️</div>
-                    <h4 class="font-black text-xs text-orange-500">رحلات شهرية</h4>
-                    <p class="text-[10px] text-slate-500 font-bold mt-1">تنسيق رحلات دورية مستقرة تريح بالك من زحمة كل يوم.</p>
+            <!-- PROBLEM / IDEA -->
+            <div class="mt-7 px-1 text-right">
+                <h2 class="text-lg font-black text-slate-800 mb-2">مشوار بيتكرر؟ خليه موجود في مكان واضح.</h2>
+                <p class="text-[12px] text-slate-500 font-bold leading-relaxed mb-5">بدل ما تفضل تدور وسط رسائل واتساب وفيسبوك، تقدر تستكشف الرحلات المسجلة وتعرض مشوارك في مكان مخصص لها.</p>
+                <div class="flex items-center justify-center gap-3 text-2xl">
+                    <span>📱</span>
+                    <span class="text-slate-300 text-base">→</span>
+                    <span>🔎</span>
+                    <span class="text-slate-300 text-base">→</span>
+                    <span>🚗</span>
                 </div>
             </div>
+
+            <!-- TWO USER TYPES -->
+            <div class="mt-8 text-right">
+                <h2 class="text-lg font-black text-slate-800 mb-4 text-center">إنت بتدور على إيه؟</h2>
+                <div class="space-y-4">
+                    <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <div class="text-2xl mb-2">🚗</div>
+                        <h4 class="font-black text-sm text-slate-800 mb-1">عندي مشوار وبدور على ركاب</h4>
+                        <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4">سجل طريقك ومواعيدك وتفاصيل الرحلة، وخلي مشوارك ظاهر للي بيدور على رحلة مشابهة.</p>
+                        <button onclick="uiTab('post'); uiRole('captain')" class="btn-green py-3.5 text-sm">سجل مشوارك</button>
+                    </div>
+                    <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+                        <div class="text-2xl mb-2">🙋‍♂️</div>
+                        <h4 class="font-black text-sm text-slate-800 mb-1">عندي مشوار وبدور على كابتن</h4>
+                        <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4">ابحث حسب المكان والمواعيد، واستكشف الرحلات المتاحة وشوف إيه اللي ممكن يناسبك.</p>
+                        <button onclick="uiTab('search'); uiSearchSwitch('captain')" class="btn-outline py-3.5 text-sm">ابحث عن رحلة</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOW IT WORKS -->
+            <div class="mt-8 text-right">
+                <h2 class="text-lg font-black text-slate-800 mb-4 text-center">ابدأ ببساطة</h2>
+                <div class="space-y-3">
+                    <div class="bg-white p-4 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center gap-3">
+                        <div class="w-9 h-9 shrink-0 rounded-full bg-[#00a884]/10 text-[#00a884] font-black flex items-center justify-center text-sm">1</div>
+                        <div class="min-w-0">
+                            <h4 class="font-black text-xs text-slate-800">حدد مشوارك</h4>
+                            <p class="text-[11px] text-slate-500 font-bold mt-0.5">اختار المكان والوجهة والمواعيد.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center gap-3">
+                        <div class="w-9 h-9 shrink-0 rounded-full bg-[#00a884]/10 text-[#00a884] font-black flex items-center justify-center text-sm">2</div>
+                        <div class="min-w-0">
+                            <h4 class="font-black text-xs text-slate-800">ابحث أو سجل</h4>
+                            <p class="text-[11px] text-slate-500 font-bold mt-0.5">استكشف الرحلات المتاحة أو اعرض مشوارك.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center gap-3">
+                        <div class="w-9 h-9 shrink-0 rounded-full bg-[#00a884]/10 text-[#00a884] font-black flex items-center justify-center text-sm">3</div>
+                        <div class="min-w-0">
+                            <h4 class="font-black text-xs text-slate-800">تواصل واتفق</h4>
+                            <p class="text-[11px] text-slate-500 font-bold mt-0.5">لما تلاقي الطرف المناسب، تواصلوا ونسقوا التفاصيل.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECURRING TRIPS -->
+            <div class="mt-8 text-right bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h2 class="text-base font-black text-slate-800 mb-2 text-center">مشوار يومي، أسبوعي أو شهري 🔄</h2>
+                <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">سواء مشوارك بيتكرر كل يوم أو في أيام محددة، تقدر تسجل تفاصيله وتبحث عن رحلات مشابهة.</p>
+                <div class="flex justify-center gap-2 flex-wrap">
+                    <span class="feature-badge">يومي</span>
+                    <span class="feature-badge">أسبوعي</span>
+                    <span class="feature-badge">شهري</span>
+                </div>
+            </div>
+
+            <!-- FINAL CTA -->
+            <div class="mt-8 py-9 px-6 bg-slate-900 rounded-[2.5rem] text-white text-center">
+                <h2 class="text-xl font-black mb-3">ابدأ من مشوارك الجاي ✨</h2>
+                <p class="text-[12px] font-bold opacity-80 leading-relaxed mb-6">سجل اللي بتدور عليه، أو شارك مشوارك مع غيرك.<br>يمكن تلاقي الرحلة المناسبة، ويمكن حد يكون بيدور على نفس المشوار.</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="uiTab('search')" class="w-full bg-[#00a884] text-white py-4 rounded-2xl font-black text-sm">🔎 ابدأ البحث</button>
+                    <button onclick="uiTab('post')" class="w-full bg-white/10 text-white py-4 rounded-2xl font-black border border-white/20 text-sm">➕ سجل مشوارك</button>
+                </div>
+            </div>
+
         </div>
 
         <!-- 2. البحث -->
@@ -172,7 +247,7 @@
         <div id="view-my" class="tab-content text-center">
             <div class="bg-white p-7 rounded-[2.5rem] border-2 border-black mb-6 shadow-sm">
                 <h2 class="font-black mb-3 italic text-xl">إدارة رحلاتي 👤</h2>
-                <p class="text-[11px] text-gray-400 font-bold leading-relaxed">بتتعرض هنا الرحلات اللي عملتها أو ربطتها بالجهاز ده بس (بكود الإدارة 🔑) — مش بمجرد كتابة رقم تليفون.</p>
+                <p class="text-[11px] text-gray-400 font-bold leading-relaxed">رحلاتك من الجهاز ده بس 📱</p>
             </div>
             <div id="list-mine"></div>
         </div>
@@ -272,6 +347,18 @@
         </div>
     </div>
 
+    <!-- مودال الإشعارات -->
+    <div id="notif-modal" class="hidden fixed inset-0 z-[600] bg-black/70 flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] p-6 max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-black text-lg text-slate-800">🔔 الإشعارات</h2>
+                <button onclick="closeNotifications()" class="text-gray-400 text-2xl leading-none px-2">×</button>
+            </div>
+            <button onclick="markAllNotificationsRead()" class="text-[10px] text-[#00a884] font-black underline mb-3 self-start">تحديد الكل كمقروء</button>
+            <div id="notif-list" class="overflow-y-auto space-y-2 flex-1"></div>
+        </div>
+    </div>
+
     <script>
         const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
@@ -367,6 +454,79 @@
             saveLocalToken(id, code.trim());
             alert('تم ربط الرحلة بجهازك ✅ دلوقتي تقدر تعدّل/تدير الرحلة دي من هنا.');
             apiGetMyTrips();
+            refreshNotifBadge();
+        }
+
+        // ===== الإشعارات (ماتشينج + تحديثات) =====
+        const NOTIF_ICONS = { match: '🎉', joined: '🤝', left: '👋', status_change: '🔄' };
+
+        function fmtNotifTime(iso) {
+            try {
+                return new Date(iso).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'numeric' });
+            } catch (e) { return ''; }
+        }
+
+        async function refreshNotifBadge() {
+            const badge = document.getElementById('notif-badge');
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) { badge.classList.add('hidden'); return; }
+            try {
+                const { data, error } = await sb.rpc('get_unread_notification_count', { p_tokens: tokens });
+                if (error) { console.error(error); return; }
+                if (data > 0) { badge.textContent = data > 9 ? '9+' : data; badge.classList.remove('hidden'); }
+                else { badge.classList.add('hidden'); }
+            } catch (e) { console.error(e); }
+        }
+
+        async function openNotifications() {
+            const modal = document.getElementById('notif-modal');
+            const list = document.getElementById('notif-list');
+            modal.classList.remove('hidden');
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) {
+                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">لسه معندكش رحلة مربوطة بالجهاز ده، فمفيش إشعارات تتعرض.</p>`;
+                return;
+            }
+            list.innerHTML = '<p class="text-center py-10 text-gray-400 font-black text-sm">جاري التحميل...</p>';
+            const { data, error } = await sb.rpc('get_my_notifications', { p_tokens: tokens });
+            if (error) {
+                list.innerHTML = `<p class="text-center py-10 text-red-400 font-black text-sm">فشل تحميل الإشعارات ❌</p>`;
+                console.error(error);
+                return;
+            }
+            if (!data || data.length === 0) {
+                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">مفيش إشعارات لسه</p>`;
+                return;
+            }
+            list.innerHTML = data.map(n => `
+                <div class="p-3 rounded-2xl border ${n.is_read ? 'bg-gray-50 border-gray-100' : 'bg-emerald-50 border-emerald-200'}">
+                    <div class="flex items-start gap-2">
+                        <span class="text-lg">${NOTIF_ICONS[n.type] || '🔔'}</span>
+                        <div class="flex-1 text-right">
+                            <p class="font-black text-xs text-slate-800">${escapeHtml(n.title)}</p>
+                            ${n.body ? `<p class="text-[11px] text-gray-500 font-bold mt-1">${escapeHtml(n.body)}</p>` : ''}
+                            <p class="text-[9px] text-gray-400 font-bold mt-1">${fmtNotifTime(n.created_at)}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
+            if (unreadIds.length > 0) {
+                await sb.rpc('mark_notifications_read', { p_tokens: tokens, p_ids: unreadIds });
+                refreshNotifBadge();
+            }
+        }
+
+        function closeNotifications() {
+            document.getElementById('notif-modal').classList.add('hidden');
+        }
+
+        async function markAllNotificationsRead() {
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) return;
+            await sb.rpc('mark_all_notifications_read', { p_tokens: tokens });
+            openNotifications();
         }
 
         function syncHeaderHeight() {
@@ -406,6 +566,8 @@
                 await checkAdminSession();
                 trackVisit();
                 apiGetTrips();
+                refreshNotifBadge();
+                setInterval(refreshNotifBadge, 45000);
             } catch (e) { console.error(e); }
         };
 
@@ -528,6 +690,7 @@
                 saveLocalToken(data.id, token);
                 alert('تم تسجيل مشوارك بنجاح! 🎉\nملحوظة: الرحلة اتربطت بجهازك ده تلقائي، فتقدر تعدّلها من قسم "رحلاتي" من نفس الجهاز.');
                 document.getElementById('postForm').reset(); uiTab('search');
+                refreshNotifBadge();
             } else if (error) {
                 alert('فشل النشر ❌: ' + error.message);
                 console.error(error);
@@ -681,6 +844,7 @@
                 document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
                 document.getElementById('join-success-modal').classList.remove('hidden');
                 apiGetTrips();
+                refreshNotifBadge();
             } finally {
                 busyActions.delete(tripId);
             }
