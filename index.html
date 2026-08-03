@@ -687,9 +687,29 @@
                 manageUI = `<div class="grid grid-cols-3 gap-2 mt-2">${isDone ? `<button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="tripAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}<button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button><button onclick="tripAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button></div>`;
             }
 
-            const alreadyJoined = !!getJoinedTrips()[t.id];
-            const leaveBtn = `<button onclick="leaveTrip('${t.id}')" class="w-full text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة</button>`;
-            let btnUI = mode === 'public' ? (alreadyJoined ? leaveBtn : (isCap ? `<div class="flex gap-2"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button></div>` : `<div class="flex gap-2 mt-1"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، أنا كابتن ومعايا عربية وشفت طلبك لرحلة ' + t.origin + ' وممكن أوصلك.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">تقديم عرض توصيل 🚗</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button></div>`)) : manageUI;
+            // بنتأكد من حالة الانضمام من بيانات السيرفر الفعلية (مش بس من ذاكرة الجهاز)
+            // عشان لو صاحب الرحلة شال المستخدم، الزرار يرجع لحالته الطبيعية تلقائيًا من غير ما يحصل خطأ
+            const localPhone = getJoinedTrips()[t.id];
+            const alreadyJoined = !!localPhone && passengers.includes(localPhone);
+            if (localPhone && !alreadyJoined) {
+                removeJoinedTripLocal(t.id); // بيانات قديمة على الجهاز، اتشال من الرحلة فعليًا
+            }
+
+            const leaveBtn = `<button onclick="leaveTrip('${t.id}')" class="flex-1 text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة</button>`;
+            let btnUI;
+            if (mode === 'public') {
+                if (isCap) {
+                    const inquiryLink = `<a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a>`;
+                    const actionBtn = alreadyJoined ? leaveBtn : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button>`;
+                    btnUI = `<div class="flex gap-2">${inquiryLink}${actionBtn}</div>`;
+                } else {
+                    const offerLink = `<a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، أنا كابتن ومعايا عربية وشفت طلبك لرحلة ' + t.origin + ' وممكن أوصلك.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">تقديم عرض توصيل 🚗</a>`;
+                    const actionBtn = alreadyJoined ? leaveBtn : `<button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button>`;
+                    btnUI = `<div class="flex gap-2 mt-1">${offerLink}${actionBtn}</div>`;
+                }
+            } else {
+                btnUI = manageUI;
+            }
 
             const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
             const deletedBadge = isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
