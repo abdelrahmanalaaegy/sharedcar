@@ -282,6 +282,15 @@
         function saveLocalToken(id, token) {
             const t = getLocalTokens(); t[id] = token; localStorage.setItem('sr_tokens', JSON.stringify(t));
         }
+        function getJoinedTrips() {
+            try { return JSON.parse(localStorage.getItem('sr_joined') || '{}'); } catch (e) { return {}; }
+        }
+        function saveJoinedTrip(id, phone) {
+            const j = getJoinedTrips(); j[id] = phone; localStorage.setItem('sr_joined', JSON.stringify(j));
+        }
+        function removeJoinedTripLocal(id) {
+            const j = getJoinedTrips(); delete j[id]; localStorage.setItem('sr_joined', JSON.stringify(j));
+        }
         function copyMgmtCode(code) {
             navigator.clipboard.writeText(code).then(() => alert('تم نسخ الكود ✅')).catch(() => prompt('انسخ الكود يدويًا:', code));
         }
@@ -578,9 +587,10 @@
         }
 
         async function joinAction(tripId, ownerPhone, origin, dest, ownerRole) {
-            const p = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
-            if(!p || p.length < 11) return alert("رقم غير صحيح");
-            const newP = '0'+p.substring(p.length-10);
+            const raw = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
+            if(!raw) return;
+            const newP = raw.trim().replace(/[\s\-]/g, '');
+            if(!/^01[0125]\d{8}$/.test(newP)) return alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)");
             const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
             if (error) {
                 if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
@@ -588,6 +598,8 @@
                 else { alert('فشل الانضمام ❌: ' + error.message); console.error(error); }
                 return;
             }
+
+            saveJoinedTrip(tripId, newP);
 
             let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
 
@@ -598,6 +610,22 @@
             document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
             document.getElementById('join-success-modal').classList.remove('hidden');
             apiGetTrips();
+        }
+
+        async function leaveTrip(tripId) {
+            const phone = getJoinedTrips()[tripId];
+            if(!phone) { alert('مفيش بيانات انضمام محفوظة لهذه الرحلة على جهازك.'); return; }
+            if(!confirm('متأكد إنك عاوز تسيب المجموعة/الرحلة دي؟')) return;
+            try {
+                const { error } = await sb.rpc('leave_trip_secure', { p_id: tripId, p_phone: phone });
+                if(error) throw error;
+                removeJoinedTripLocal(tripId);
+                alert('تم خروجك من المجموعة بنجاح ✅');
+                apiGetTrips();
+            } catch (e) {
+                alert('فشل ❌: ' + e.message);
+                console.error(e);
+            }
         }
 
         async function removeJoiner(tripId, phoneToRemove, mode) {
@@ -650,7 +678,9 @@
                 manageUI = `<div class="grid grid-cols-3 gap-2 mt-2">${isDone ? `<button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="tripAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}<button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button><button onclick="tripAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button></div>`;
             }
 
-            let btnUI = mode === 'public' ? (isCap ? `<div class="flex gap-2"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button></div>` : `<div class="flex gap-2 mt-1"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، أنا كابتن ومعايا عربية وشفت طلبك لرحلة ' + t.origin + ' وممكن أوصلك.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">تقديم عرض توصيل 🚗</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button></div>`) : manageUI;
+            const alreadyJoined = !!getJoinedTrips()[t.id];
+            const leaveBtn = `<button onclick="leaveTrip('${t.id}')" class="w-full text-center p-3 rounded-2xl text-xs font-black bg-red-50 text-red-600 border-2 border-red-200">🚪 سيب المجموعة / الرحلة دي</button>`;
+            let btnUI = mode === 'public' ? (alreadyJoined ? leaveBtn : (isCap ? `<div class="flex gap-2"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' وعاوز أستفسر عن حاجة.')}" target="_blank" class="btn-outline flex-1">استفسار 💬</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'captain')" class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button></div>` : `<div class="flex gap-2 mt-1"><a href="https://api.whatsapp.com/send?phone=${t.whatsapp_number}&text=${encodeURIComponent('سلام عليكم، أنا كابتن ومعايا عربية وشفت طلبك لرحلة ' + t.origin + ' وممكن أوصلك.')}" target="_blank" class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">تقديم عرض توصيل 🚗</a><button onclick="joinAction('${t.id}', '${t.whatsapp_number}', '${t.origin}', '${t.destination}', 'passenger')" class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button></div>`)) : manageUI;
 
             const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
             const deletedBadge = isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
