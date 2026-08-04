@@ -63,9 +63,45 @@
         .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #cbd5e1; }
         .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 14px; flex: 1; min-width: 0; text-align: center; border:none; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 
+        /* زرار مشاركة الرحلة (📤) — دايرة صغيرة فوق الـ role-badge في عمود side-info */
+        .share-btn { width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; font-size: 12px; border: none; cursor: pointer; margin-bottom: 6px; transition: 0.2s; flex-shrink: 0; }
+        .share-btn:active { transform: scale(0.9); background: #e2e8f0; }
+
+        /* شيت المشاركة (فولباك يدوي للأجهزة اللي مفيهاش مشاركة نظام) */
+        #share-sheet { position: fixed; inset: 0; z-index: 650; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #share-sheet.open { display: flex; }
+        .share-sheet-inner { background: #f8fafc; width: 100%; max-width: 420px; border-radius: 30px 30px 0 0; padding: 22px 18px 26px; animation: fofiUp 0.3s ease; }
+        .share-options-row { display: flex; justify-content: space-around; margin-top: 18px; }
+        .share-opt { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; }
+        .share-opt:active { transform: scale(0.93); }
+        .share-opt-icon { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; box-shadow: 0 8px 18px rgba(0,0,0,0.15); }
+        .share-opt span { font-size: 10px; font-weight: 900; color: #334155; }
+
         .stat-box { background: #0b141a; color: white; padding: 15px; border-radius: 24px; text-align: center; border-bottom: 4px solid #00a884; }
         .stat-red { background: #7f1d1d !important; border-bottom: 4px solid #ef4444 !important; }
         .joined-list { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 15px; margin-top: 10px; }
+
+        /* ===== مساعد FOFi — زرار عائم ثابت أسفل يمين الشاشة، تحت زرار الرجوع لفوق ===== */
+        #fofi-fab { position: fixed; bottom: 20px; right: 18px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #00a884, #0b3d36); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,168,132,0.45); border: none; z-index: 250; cursor: pointer; transition: transform 0.2s ease; }
+        .fofi-avatar { display: inline-block; line-height: 0; }
+        #fofi-fab:active { transform: scale(0.92); }
+        #fofi-fab .fofi-fab-tag { position: absolute; bottom: -7px; font-size: 8px; font-weight: 900; background: #0b141a; color: white; padding: 1.5px 7px; border-radius: 8px; letter-spacing: 0.3px; }
+        #fofi-fab .fofi-fab-dot { position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: #f97316; border: 2px solid white; border-radius: 50%; }
+
+        /* لوحة شات FOFi */
+        #fofi-panel { position: fixed; inset: 0; z-index: 700; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #fofi-panel.open { display: flex; }
+        .fofi-sheet { background: #f8fafc; width: 100%; max-width: 440px; height: 82vh; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -15px 40px rgba(0,0,0,0.25); animation: fofiUp 0.3s ease; }
+        @keyframes fofiUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .fofi-header { background: linear-gradient(135deg, #0b3d36, #00a884); color: white; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .fofi-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .fofi-bubble-bot { background: white; border: 1px solid #e2e8f0; border-radius: 18px 18px 18px 4px; padding: 13px 15px; font-size: 12.5px; font-weight: 700; color: #334155; line-height: 1.8; align-self: flex-start; max-width: 90%; text-align: right; }
+        .fofi-bubble-user { background: #00a884; color: white; border-radius: 18px 18px 4px 18px; padding: 11px 15px; font-size: 12.5px; font-weight: 800; align-self: flex-end; max-width: 82%; text-align: right; }
+        .fofi-chip-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+        .fofi-chip { background: white; border: 1.5px solid #00a884; color: #00a884; font-weight: 900; font-size: 11.5px; padding: 9px 14px; border-radius: 16px; cursor: pointer; }
+        .fofi-chip:active { transform: scale(0.95); }
+        .fofi-chip-orange { border-color: #f97316; color: #f97316; }
+        .fofi-wa-btn { background: #25D366; color: white; font-weight: 900; font-size: 13px; padding: 15px; border-radius: 18px; text-align: center; display: block; text-decoration: none; box-shadow: 0 8px 18px rgba(37,211,102,0.35); align-self: stretch; }
     </style>
 </head>
 <body>
@@ -106,51 +142,28 @@
         <!-- 1. الصفحة الرئيسية -->
         <div id="view-home" class="tab-content active py-2">
 
-            <!-- HERO -->
-            <div class="py-9 px-6 bg-gradient-to-br from-[#00a884] to-[#128c7e] rounded-[2.5rem] text-white shadow-xl text-right">
-                <h1 class="text-2xl font-black mb-3 leading-snug tracking-tight">يمكن المشوار اللي بتدور عليه موجود هنا 🚗</h1>
-                <p class="text-[13px] font-bold opacity-90 leading-relaxed mb-7">رحلات متكررة للشغل والدراسة والمشاوير اليومية.<br>ابحث عن رحلة أو سجل مشوارك، وشوف الخيارات المتاحة.</p>
-                <div class="flex flex-col gap-3">
-                    <button onclick="uiTab('search')" class="w-full bg-white text-[#00a884] py-4 rounded-2xl font-black shadow-lg text-sm">🔎 ابحث عن رحلة</button>
-                    <button onclick="uiTab('post')" class="w-full bg-black/15 text-white py-4 rounded-2xl font-black border border-white/30 text-sm">➕ سجل مشوارك</button>
+            <!-- HERO (بدون أزرار — الهيرو بيرحّب بس، والفعل الحقيقي في تبويب "إنت عايز إيه" تحت) -->
+            <div class="py-8 px-6 bg-gradient-to-br from-[#00a884] to-[#128c7e] rounded-[2.5rem] text-white shadow-xl text-right">
+                <h1 class="text-2xl font-black mb-2 leading-snug tracking-tight">يمكن المشوار اللي بتدور عليه موجود هنا 🚗</h1>
+                <p class="text-[13px] font-bold opacity-90 leading-relaxed">رحلات متكررة للشغل والدراسة والمشاوير اليومية، في مكان واحد واضح ومنظم.</p>
+                <div class="flex items-center gap-2 mt-5 text-[11px] font-bold opacity-80">
+                    <span>👇 اختار اللي يناسبك تحت</span>
                 </div>
             </div>
 
-            <!-- PROBLEM / IDEA -->
-            <div class="mt-7 px-1 text-right">
-                <h2 class="text-lg font-black text-slate-800 mb-2">مشوار بيتكرر؟ خليه موجود في مكان واضح.</h2>
-                <p class="text-[12px] text-slate-500 font-bold leading-relaxed mb-5">بدل ما تفضل تدور وسط رسائل واتساب وفيسبوك، تقدر تستكشف الرحلات المسجلة وتعرض مشوارك في مكان مخصص لها.</p>
-                <div class="flex items-center justify-center gap-3 text-2xl">
-                    <span>📱</span>
-                    <span class="text-slate-300 text-base">→</span>
-                    <span>🔎</span>
-                    <span class="text-slate-300 text-base">→</span>
-                    <span>🚗</span>
+            <!-- إنت عايز إيه؟ (تبويب تفاعلي واحد بدل تكرار الأزرار) -->
+            <div class="mt-6 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm text-right">
+                <h2 class="text-base font-black text-slate-800 mb-4 text-center">إنت عايز إيه دلوقتي؟</h2>
+                <div class="bg-slate-100 p-1 rounded-2xl flex gap-1 mb-4">
+                    <button onclick="homeRoleSelect('captain')" id="home-role-cap" class="flex-1 py-3 rounded-xl font-black text-[12px] transition">🚗 عندي عربية</button>
+                    <button onclick="homeRoleSelect('passenger')" id="home-role-pas" class="flex-1 py-3 rounded-xl font-black text-[12px] transition">🙋‍♂️ بدور على مشوار</button>
                 </div>
-            </div>
-
-            <!-- TWO USER TYPES -->
-            <div class="mt-8 text-right">
-                <h2 class="text-lg font-black text-slate-800 mb-4 text-center">إنت بتدور على إيه؟</h2>
-                <div class="space-y-4">
-                    <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
-                        <div class="text-2xl mb-2">🚗</div>
-                        <h4 class="font-black text-sm text-slate-800 mb-1">عندي مشوار وبدور على ركاب</h4>
-                        <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4">سجل طريقك ومواعيدك وتفاصيل الرحلة، وخلي مشوارك ظاهر للي بيدور على رحلة مشابهة.</p>
-                        <button onclick="uiTab('post'); uiRole('captain')" class="btn-green py-3.5 text-sm">سجل مشوارك</button>
-                    </div>
-                    <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
-                        <div class="text-2xl mb-2">🙋‍♂️</div>
-                        <h4 class="font-black text-sm text-slate-800 mb-1">عندي مشوار وبدور على كابتن</h4>
-                        <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4">ابحث حسب المكان والمواعيد، واستكشف الرحلات المتاحة وشوف إيه اللي ممكن يناسبك.</p>
-                        <button onclick="uiTab('search'); uiSearchSwitch('captain')" class="btn-outline py-3.5 text-sm">ابحث عن رحلة</button>
-                    </div>
-                </div>
+                <div id="home-role-desc"></div>
             </div>
 
             <!-- HOW IT WORKS -->
-            <div class="mt-8 text-right">
-                <h2 class="text-lg font-black text-slate-800 mb-4 text-center">ابدأ ببساطة</h2>
+            <div class="mt-7 text-right">
+                <h2 class="text-base font-black text-slate-800 mb-4 text-center">ابدأ ببساطة في 3 خطوات</h2>
                 <div class="space-y-3">
                     <div class="bg-white p-4 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center gap-3">
                         <div class="w-9 h-9 shrink-0 rounded-full bg-[#00a884]/10 text-[#00a884] font-black flex items-center justify-center text-sm">1</div>
@@ -177,7 +190,7 @@
             </div>
 
             <!-- RECURRING TRIPS -->
-            <div class="mt-8 text-right bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div class="mt-7 text-right bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
                 <h2 class="text-base font-black text-slate-800 mb-2 text-center">مشوار يومي، أسبوعي أو شهري 🔄</h2>
                 <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">سواء مشوارك بيتكرر كل يوم أو في أيام محددة، تقدر تسجل تفاصيله وتبحث عن رحلات مشابهة.</p>
                 <div class="flex justify-center gap-2 flex-wrap">
@@ -187,14 +200,10 @@
                 </div>
             </div>
 
-            <!-- FINAL CTA -->
-            <div class="mt-8 py-9 px-6 bg-slate-900 rounded-[2.5rem] text-white text-center">
-                <h2 class="text-xl font-black mb-3">ابدأ من مشوارك الجاي ✨</h2>
-                <p class="text-[12px] font-bold opacity-80 leading-relaxed mb-6">سجل اللي بتدور عليه، أو شارك مشوارك مع غيرك.<br>يمكن تلاقي الرحلة المناسبة، ويمكن حد يكون بيدور على نفس المشوار.</p>
-                <div class="flex flex-col gap-3">
-                    <button onclick="uiTab('search')" class="w-full bg-[#00a884] text-white py-4 rounded-2xl font-black text-sm">🔎 ابدأ البحث</button>
-                    <button onclick="uiTab('post')" class="w-full bg-white/10 text-white py-4 rounded-2xl font-black border border-white/20 text-sm">➕ سجل مشوارك</button>
-                </div>
+            <!-- إغلاق هادي بدل التكرار — رابط بسيط بس مش هيرو تاني -->
+            <div class="mt-7 mb-2 text-center">
+                <p class="text-[11px] text-slate-400 font-bold mb-2">لسه مش عارف تبدأ منين؟</p>
+                <button onclick="openFofi()" class="text-[12px] font-black text-[#00a884] underline underline-offset-2">اسأل مساعد FOFi 💬</button>
             </div>
 
         </div>
@@ -306,6 +315,60 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
     </button>
 
+    <!-- زرار مساعد FOFi العائم — ثابت أسفل يمين الشاشة، تحت زرار الرجوع لفوق، وظاهر في كل الصفحات -->
+    <button id="fofi-fab" onclick="openFofi()" aria-label="مساعد FOFi">
+        <span class="fofi-fab-dot"></span>
+        <span class="fofi-avatar" style="width:34px;height:34px;">
+            <svg viewBox="0 0 64 64" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M18 26c-1-11 7-19 14-19s15 8 14 19c-2-6-7-9-14-9s-12 3-14 9z" fill="#1a120b"/>
+                <circle cx="32" cy="28" r="13" fill="#eab98a"/>
+                <circle cx="27" cy="27" r="1.4" fill="#1a120b"/>
+                <circle cx="37" cy="27" r="1.4" fill="#1a120b"/>
+                <path d="M26 33c2 2.5 10 2.5 12 0" stroke="#7a4526" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+                <rect x="27" y="38" width="10" height="7" rx="3" fill="#eab98a"/>
+                <path d="M10 64c1-13 10-20 22-20s21 7 22 20z" fill="#1f2937"/>
+                <path d="M27 44l5 9 5-9-5 4z" fill="#f8fafc"/>
+                <path d="M32 44l-9 20-4-7 6-15z" fill="#111827"/>
+                <path d="M32 44l9 20 4-7-6-15z" fill="#111827"/>
+                <circle cx="43" cy="52" r="1.6" fill="#00a884"/>
+            </svg>
+        </span>
+        <span class="fofi-fab-tag">FOFi</span>
+    </button>
+
+    <!-- لوحة شات مساعد FOFi -->
+    <div id="fofi-panel" onclick="if(event.target===this) closeFofi()">
+        <div class="fofi-sheet">
+            <div class="fofi-header">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden shadow-inner">
+                        <span class="fofi-avatar" style="width:34px;height:34px;">
+                            <svg viewBox="0 0 64 64" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M18 26c-1-11 7-19 14-19s15 8 14 19c-2-6-7-9-14-9s-12 3-14 9z" fill="#1a120b"/>
+                                <circle cx="32" cy="28" r="13" fill="#eab98a"/>
+                                <circle cx="27" cy="27" r="1.4" fill="#1a120b"/>
+                                <circle cx="37" cy="27" r="1.4" fill="#1a120b"/>
+                                <path d="M26 33c2 2.5 10 2.5 12 0" stroke="#7a4526" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+                                <rect x="27" y="38" width="10" height="7" rx="3" fill="#eab98a"/>
+                                <path d="M10 64c1-13 10-20 22-20s21 7 22 20z" fill="#1f2937"/>
+                                <path d="M27 44l5 9 5-9-5 4z" fill="#f8fafc"/>
+                                <path d="M32 44l-9 20-4-7 6-15z" fill="#111827"/>
+                                <path d="M32 44l9 20 4-7-6-15z" fill="#111827"/>
+                                <circle cx="43" cy="52" r="1.6" fill="#00a884"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-sm">FOFi</h3>
+                        <p class="text-[10px] opacity-80 font-bold">مساعدك في ShareRide 💬</p>
+                    </div>
+                </div>
+                <button onclick="closeFofi()" class="text-white/80 text-2xl leading-none px-1">×</button>
+            </div>
+            <div id="fofi-body" class="fofi-body"></div>
+        </div>
+    </div>
+
     <!-- Modal التعديل المصلح تماماً -->
     <div id="global-edit-form">
         <div class="edit-modal shadow-2xl space-y-4">
@@ -370,6 +433,35 @@
                 <button onclick="closeSingleTripModal()" class="text-gray-400 text-2xl leading-none px-2">×</button>
             </div>
             <div id="single-trip-content" class="overflow-y-auto flex-1"></div>
+        </div>
+    </div>
+
+    <!-- شيت مشاركة الرحلة — بيظهر بس لو جهاز المستخدم مفيهوش مشاركة نظام (Web Share API) -->
+    <div id="share-sheet" onclick="if(event.target===this) closeShareSheet()">
+        <div class="share-sheet-inner" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between">
+                <h3 class="font-black text-slate-800 text-sm">شارك الرحلة 📤</h3>
+                <button onclick="closeShareSheet()" class="text-gray-400 text-2xl leading-none px-1">×</button>
+            </div>
+            <p class="text-[10px] text-gray-400 font-bold mt-1">اختار المنصة اللي عايز تشارك بيها</p>
+            <div class="share-options-row">
+                <button class="share-opt" onclick="shareVia('whatsapp')">
+                    <span class="share-opt-icon" style="background:#25D366;">💬</span>
+                    <span>واتساب</span>
+                </button>
+                <button class="share-opt" onclick="shareVia('messenger')">
+                    <span class="share-opt-icon" style="background:#0084FF;">💌</span>
+                    <span>ماسنجر</span>
+                </button>
+                <button class="share-opt" onclick="shareVia('facebook')">
+                    <span class="share-opt-icon" style="background:#1877F2;">📘</span>
+                    <span>فيسبوك</span>
+                </button>
+                <button class="share-opt" onclick="shareVia('copy')">
+                    <span class="share-opt-icon" style="background:#64748b;">🔗</span>
+                    <span>نسخ</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -512,6 +604,11 @@
                 list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">مفيش إشعارات لسه</p>`;
                 return;
             }
+            // ملاحظة: كانت هنا فلترة بتخفي إشعارات "status_change" من العرض، بس بقت مش محتاجة
+            // لأن الباك اند (trg_trips_after_write) بقى أصلًا مش بيدرّج إشعارات status_change في الجدول من الجذر.
+            if (data.length === 0) {
+                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">مفيش إشعارات لسه</p>`;
+            } else {
             list.innerHTML = data.map(n => {
                 const clickable = n.type === 'match' && n.related_trip_id;
                 return `
@@ -529,7 +626,9 @@
                 </div>
             `;
             }).join('');
+            }
 
+            // بنعلّم كل الإشعارات "مقروءة" عشان العداد يتصفّر صح
             const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
             if (unreadIds.length > 0) {
                 await sb.rpc('mark_notifications_read', { p_tokens: tokens, p_ids: unreadIds });
@@ -582,6 +681,7 @@
             try {
                 sb = supabase.createClient(SB_URL, SB_KEY);
                 fillDropdowns();
+                homeRoleSelect('captain');
                 await checkAdminSession();
                 trackVisit();
                 apiGetTrips();
@@ -632,6 +732,42 @@
             document.getElementById('role-pas').className = !isCap ? "flex-1 py-3 rounded-xl font-black text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-xl font-black text-xs text-gray-500";
         }
 
+        // ===== تبويب "إنت عايز إيه؟" التفاعلي في الصفحة الرئيسية =====
+        const HOME_ROLE_CONTENT = {
+            captain: {
+                text: 'سجّل مشوارك مرة واحدة وخليه ظاهر لكل الركاب اللي بيدوروا على نفس الطريق. الموضوع بياخد دقيقة، ومجاني بالكامل 🙌',
+                btnLabel: 'سجّل مشوارك الآن ➕',
+                btnClass: 'btn-green',
+                btnAction: "uiTab('post'); uiRole('captain')"
+            },
+            passenger: {
+                text: 'ابحث عن كابتن بيعمل نفس مشوارك، أو سجّل طلبك وخلي ركاب تانيين عندهم نفس الطريق يلاقوك وينضموا ليك 🚗',
+                btnLabel: '🔎 دور على كابتن',
+                btnClass: 'w-full bg-orange-500 hover:bg-orange-600 text-white rounded-[22px] font-black py-4 shadow-lg transition',
+                btnAction: "uiTab('search'); uiSearchSwitch('captain')",
+                linkLabel: 'أو سجّل نفسك كراكب بدل البحث',
+                linkAction: "uiTab('post'); uiRole('passenger')"
+            }
+        };
+
+        function homeRoleSelect(role) {
+            const capBtn = document.getElementById('home-role-cap');
+            const pasBtn = document.getElementById('home-role-pas');
+            capBtn.className = role === 'captain'
+                ? "flex-1 py-3 rounded-xl font-black text-[12px] bg-white text-[#00a884] shadow-sm transition"
+                : "flex-1 py-3 rounded-xl font-black text-[12px] text-slate-500 transition";
+            pasBtn.className = role === 'passenger'
+                ? "flex-1 py-3 rounded-xl font-black text-[12px] bg-white text-orange-600 shadow-sm transition"
+                : "flex-1 py-3 rounded-xl font-black text-[12px] text-slate-500 transition";
+
+            const c = HOME_ROLE_CONTENT[role];
+            document.getElementById('home-role-desc').innerHTML = `
+                <p class="text-[12px] text-slate-500 font-bold leading-relaxed mb-4 text-center">${c.text}</p>
+                <button onclick="${c.btnAction}" class="${c.btnClass} text-sm">${c.btnLabel}</button>
+                ${c.linkLabel ? `<button onclick="${c.linkAction}" class="w-full mt-2 text-[11px] font-black text-slate-400 underline">${c.linkLabel}</button>` : ''}
+            `;
+        }
+
         async function apiGetTrips() {
             const list = document.getElementById('list-public');
             list.innerHTML = '<p class="text-center py-20 text-gray-400 font-black italic">جاري البحث...</p>';
@@ -660,13 +796,19 @@
             }
         }
 
+        // 🧩 نفس كارت "مفيش رحلات مربوطة بالجهاز ده" كان بيتكرر مرتين بالظبط جوه apiGetMyTrips
+        // (لما مفيش tokens خالص، ولما فيه tokens بس كل الرحلات archived)، فبقى في مكان واحد بس.
+        function noLinkedTripsCard() {
+            return `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك الأول دلوقتي، أو لو نشرت رحلة قبل كده من جهاز تاني، FOFi هيساعدك ترجعها.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic mb-2">سجل مشوارك الآن ➕</button><button onclick="openFofi('oldcode')" class="w-full bg-orange-500 text-white py-3 rounded-2xl font-black text-[13px] shadow-md">🔑 رجّع رحلاتك القديمة</button></div>`;
+        }
+
         async function apiGetMyTrips() {
             const list = document.getElementById('list-mine');
             // بنقرا أكواد إدارة الرحلات المحفوظة على الجهاز ده بس (نفس الفكرة المستخدمة في التعديل/الحذف)
             // بدل الاعتماد على رقم تليفون بيتكتب، عشان محدش يقدر يشوف رحلات حد تاني بمجرد معرفة رقمه
             const tokens = Object.values(getLocalTokens());
             if (tokens.length === 0) {
-                list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">لو نشرت رحلة من جهاز تاني، اضغط 🔑 تحتها هنا وحط كود إدارتها، أو سجل مشوارك الأول دلوقتي.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
+                list.innerHTML = noLinkedTripsCard();
                 return;
             }
             list.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل رحلاتك...</p>';
@@ -684,7 +826,7 @@
                 if(visibleData.length > 0) {
                     list.innerHTML = visibleData.map(t => card(t, 'my')).join('');
                 } else {
-                    list.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك الأول دلوقتي، أو اربط رحلة قديمة بكود الإدارة 🔑.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic">سجل مشوارك الآن ➕</button></div>`;
+                    list.innerHTML = noLinkedTripsCard();
                 }
             }
         }
@@ -933,6 +1075,46 @@
             }
         }
 
+        // ===== مشاركة الرحلة (واتساب / ماسنجر / فيسبوك / أي منصة تانية) =====
+        // بيحتفظ بنص وآخر رابط تمت مشاركتهم عشان أزرار الشيت (شيت الفولباك) تقدر توصل لهم وقت الضغط
+        let shareCtx = { text: '', url: '' };
+
+        function shareTrip(text) {
+            const url = location.origin + location.pathname;
+            shareCtx = { text, url };
+            // أولوية لمشاركة النظام (Web Share API) — بتظهر واتساب وماسنجر وفيسبوك وأي تطبيق تاني
+            // مثبت عند المستخدم نفسه، من غير ما نحتاج نبني رابط مخصص لكل منصة
+            if (navigator.share) {
+                navigator.share({ text: text + '\n' + url }).catch(() => {});
+            } else {
+                document.getElementById('share-sheet').classList.add('open');
+            }
+        }
+
+        function closeShareSheet() {
+            document.getElementById('share-sheet').classList.remove('open');
+        }
+
+        function shareVia(platform) {
+            const fullText = shareCtx.text + '\n' + shareCtx.url;
+            const encodedText = encodeURIComponent(fullText);
+            const encodedUrl = encodeURIComponent(shareCtx.url);
+            if (platform === 'copy') {
+                navigator.clipboard.writeText(fullText)
+                    .then(() => alert('تم نسخ تفاصيل الرحلة ✅'))
+                    .catch(() => alert('حصل خطأ في النسخ ❌'));
+                closeShareSheet();
+                return;
+            }
+            const links = {
+                whatsapp: `https://api.whatsapp.com/send?text=${encodedText}`,
+                facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`,
+                messenger: `fb-messenger://share/?link=${encodedUrl}`
+            };
+            window.open(links[platform], '_blank');
+            closeShareSheet();
+        }
+
         function card(t, mode) {
             const isCap = t.user_role === 'captain';
             const isDone = t.status === 'completed';
@@ -1002,7 +1184,14 @@
             const selectCb = mode === 'admin' ? `<div class="flex items-center gap-2 mb-2"><input type="checkbox" class="admin-select-cb w-5 h-5 accent-red-600" value="${t.id}" onchange="updateBulkBar()"><span class="text-[9px] font-black text-gray-400">تحديد للإجراء الجماعي</span></div>` : '';
             const deletedBadge = isArchived ? `<span class="inline-block bg-black text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ حذف نهائي بواسطة المستخدم — في انتظارك</span>` : isDeleted ? `<span class="inline-block bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-lg mb-2">🗑️ محذوفة بواسطة المستخدم</span>` : '';
 
-            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${escapeHtml(t.origin)} ⬅️ ${escapeHtml(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${escapeHtml(t.mgmt_code) || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}${mode === 'my' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 الرحلة دي مسجلة برقم: ${escapeHtml(displayPhone)}</p>` : ''}</div><div>${btnUI}</div></div>`;
+            // نص جاهز للمشاركة الخارجية (واتساب/ماسنجر/فيسبوك/أي منصة) — بيتحط جوه زرار 📤 في الكارت
+            const shareText = `🚗 رحلة ${isCap ? 'كابتن' : 'مجموعة ركاب'}: ${t.origin} ⬅️ ${t.destination}\n`
+                + `${hasDep ? '🕒 ذهاب: ' + t.departure_time + '\n' : ''}`
+                + `${hasRet ? '🕒 عودة: ' + t.return_time + '\n' : ''}`
+                + `${isCap && t.price_per_seat ? '💰 السعر: ' + t.price_per_seat + '\n' : ''}`
+                + `📲 شوف التفاصيل وتواصل عبر تطبيق ShareRide:`;
+
+            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${escapeHtml(t.origin)} ⬅️ ${escapeHtml(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><button onclick='shareTrip(${JSON.stringify(shareText)})' class="share-btn" aria-label="مشاركة الرحلة">📤</button><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://api.whatsapp.com/send?phone=2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${escapeHtml(t.mgmt_code) || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}${mode === 'my' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 الرحلة دي مسجلة برقم: ${escapeHtml(displayPhone)}</p>` : ''}</div><div>${btnUI}</div></div>`;
         }
 
         // بيفتح مودال فيه كارت رحلة واحدة بس (من غير أي كروت تانية حواليها)
@@ -1123,6 +1312,132 @@
             }
             apiAdminReload();
             apiGetTrips();
+        }
+
+        // ================== مساعد FOFi (rule-based، مدمج بالكامل جوه الصفحة) ==================
+        const SUPPORT_WA_NUMBER = '201101002429'; // 01101002429 بصيغة دولية
+
+        const FOFI_KB = {
+            post: {
+                title: 'نشر مشوار جديد 📝',
+                body: 'تقدر تسجّل مشوارك في خطوات بسيطة: تختار دورك (كابتن ولا راكب)، تحدد مكان الانطلاق والوجهة، وتحط موعد ذهاب و/أو عودة (لازم واحد منهم على الأقل). لو انت كابتن، بتحدد كمان عدد المقاعد المتاحة والسعر وهل العربية مكيفة. وأخيرًا تحط رقم واتسابك وتدوس "نشر المشوار الآن 🚀". المنصة مصممة أساسًا للمشاوير المتكررة، فبتفضل ظاهرة لحد ما تغيّرها بنفسك.',
+                chips: [ { label: '📲 سجّل مشوارك دلوقتي', action: "closeFofi(); uiTab('post');" } ]
+            },
+            search: {
+                title: 'البحث عن رحلة 🔎',
+                body: 'من قسم "استكشاف" تقدر تتنقل بين رحلات الكباتن ورحلات الركاب، وتفلتر حسب مكان الانطلاق والوجهة. كل رحلة بتظهر في كارت فيه كل التفاصيل: المسار، المواعيد، السعر، المقاعد المتاحة، وهل مكيفة. ولو ملقيتش حاجة تناسبك، تقدر تسجّل مشوارك انت وتستنى حد يلاقيك 🙌',
+                chips: [ { label: '🔎 روح لقسم الاستكشاف', action: "closeFofi(); uiTab('search');" } ]
+            },
+            join: {
+                title: 'الحجز والانضمام 🤝',
+                body: 'تقدر تتواصل مع أي كابتن أو راكب بزرار واتساب مباشر من كارت الرحلة. لو انت راكب وعايز تحجز مقعد مع كابتن، تدوس "حجز مقعد" وتدخل رقمك، وهيظهرلك تأكيد وزرار تبعت بيه واتساب للكابتن. ولو مش قادر تنضم، غالبًا السبب إنك أصلًا منضم أو عندك رحلة نشطة تانية، فلازم تسيبها أو تخلّصها الأول من "رحلاتي".',
+                chips: [ { label: '🔎 استكشف الرحلات', action: "closeFofi(); uiTab('search');" } ]
+            },
+            mytrips: {
+                title: 'إدارة رحلاتي 🗂️',
+                body: 'رحلاتك بترتبط تلقائيًا بالجهاز اللي نشرت منه، فمش محتاج تعمل حساب ولا باسورد. من قسم "رحلاتي" تقدر تعدّل، تكمّل، تحذف، أو تسترجع أي رحلة بتاعتك. الفرق بين "حذف" و"حذف نهائي": الحذف العادي بترجعه بـ ♻️ استرجاع وقت ما تحب، أما "حذف نهائي" فبيخفيها تمامًا ومتقدرش ترجعها بنفسك تاني.',
+                chips: [
+                    { label: '📂 روح لقسم رحلاتي', action: "closeFofi(); uiTab('my');" },
+                    { label: '🔑 عندي كود إدارة رحلة قديمة', action: "fofiGo('oldcode')", cls: 'fofi-chip-orange' }
+                ]
+            },
+            oldcode: {
+                title: 'رجّع رحلاتك القديمة 🔑',
+                body: 'حاسس إنك مش لاقي رحلة نشرتها قبل كده من جهاز تاني؟ محتاجلها كود إدارة عشان تربطها بجهازك الجديد، بس الكود ده مش بيظهرلك تلقائي من داخل التطبيق دلوقتي. ولا يهمك، كلمنا على واتساب وابعتلنا التفاصيل، وإحنا هنبعتلك الكود يدويًا في أقرب وقت 💛',
+                whatsapp: { text: 'من فضلك عايز كود رحلتي', label: 'تواصل مع الدعم على واتساب 💬' }
+            },
+            notif: {
+                title: 'الإشعارات والتوافق 🔔',
+                body: 'المنصة بتنبّهك تلقائيًا لو لقت حد بيدور على نفس مشوارك بالظبط (ماتشينج)، أو لو حد انضم لرحلتك أو سابها. لو حاسس إن إشعار متأخر عليك، جرب تفتح التطبيق تاني عشان يتحدّث، وتأكد إن رحلتك لسه نشطة ومربوطة بالجهاز الصحيح.',
+                chips: [ { label: '🔔 افتح الإشعارات', action: "closeFofi(); openNotifications();" } ]
+            },
+            privacy: {
+                title: 'الأمان والخصوصية 🔒',
+                body: 'مفيش تسجيل دخول أو باسورد للمستخدم العادي — كل حاجة بتتم بأمان من خلال جهازك. رقم تليفونك محمي ومش بيظهر لأي حد إلا بعد ما تتواصل أو تنضم لرحلة معينة، وفقط للطرف المعني بيها.',
+                chips: []
+            },
+            pricing: {
+                title: 'الأسعار والدفع 💳',
+                body: 'استخدام المنصة نفسها مجاني 100%، مفيش أي اشتراك أو عمولة على النشر أو البحث أو التواصل. سعر المقعد بيحدده الكابتن بنفسه وقت النشر، وطريقة الدفع بتتفق عليها انت والطرف التاني مباشرة بعد التواصل.',
+                chips: []
+            }
+        };
+
+        function fofiAddBot(html) {
+            const body = document.getElementById('fofi-body');
+            const div = document.createElement('div');
+            div.className = 'fofi-bubble-bot';
+            div.innerHTML = html;
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function fofiAddChips(chips) {
+            if (!chips || chips.length === 0) return;
+            const body = document.getElementById('fofi-body');
+            const row = document.createElement('div');
+            row.className = 'fofi-chip-row';
+            chips.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'fofi-chip ' + (c.cls || '');
+                btn.textContent = c.label;
+                btn.setAttribute('onclick', c.action);
+                row.appendChild(btn);
+            });
+            body.appendChild(row);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function fofiMenuChips() {
+            return [
+                { label: '📝 نشر مشوار', action: "fofiGo('post')" },
+                { label: '🔎 البحث عن رحلة', action: "fofiGo('search')" },
+                { label: '🤝 الحجز والانضمام', action: "fofiGo('join')" },
+                { label: '🗂️ إدارة رحلاتي', action: "fofiGo('mytrips')" },
+                { label: '🔔 الإشعارات', action: "fofiGo('notif')" },
+                { label: '🔒 الأمان والخصوصية', action: "fofiGo('privacy')" },
+                { label: '💳 الأسعار والدفع', action: "fofiGo('pricing')" }
+            ];
+        }
+
+        function openFofi(topic) {
+            const panel = document.getElementById('fofi-panel');
+            panel.classList.add('open');
+            document.getElementById('fofi-body').innerHTML = '';
+            fofiAddBot('أهلًا بيك! 👋 أنا <b>FOFi</b>، مساعدك في ShareRide. تحب تسألني في إيه؟');
+            if (topic && FOFI_KB[topic]) {
+                fofiGo(topic);
+            } else {
+                fofiAddChips(fofiMenuChips());
+            }
+        }
+
+        function closeFofi() {
+            document.getElementById('fofi-panel').classList.remove('open');
+        }
+
+        function fofiGo(topicKey) {
+            const t = FOFI_KB[topicKey];
+            if (!t) return;
+            fofiAddBot(`<b>${t.title}</b><br><br>${t.body}`);
+            if (t.whatsapp) {
+                const body = document.getElementById('fofi-body');
+                const a = document.createElement('a');
+                a.className = 'fofi-wa-btn';
+                a.target = '_blank';
+                a.rel = 'noopener';
+                a.textContent = t.whatsapp.label;
+                a.href = `https://wa.me/${SUPPORT_WA_NUMBER}?text=${encodeURIComponent(t.whatsapp.text)}`;
+                body.appendChild(a);
+                body.scrollTop = body.scrollHeight;
+            }
+            fofiAddChips(t.chips || []);
+            fofiAddChips([{ label: '📋 رجوع للقائمة', action: 'fofiBackToMenu()' }]);
+        }
+
+        function fofiBackToMenu() {
+            fofiAddBot('تمام، تحب تسأل في إيه تاني؟ 😊');
+            fofiAddChips(fofiMenuChips());
         }
 
         function fillDropdowns() {
