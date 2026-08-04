@@ -598,32 +598,58 @@
             } catch (e) { return ''; }
         }
 
-        // بنتابع عدد الإشعارات الغير مقروءة بين كل تحديث والتاني، عشان لو زاد وإحنا فاتحين التطبيق
-        // نظهر تنبيه لحظي (Toast) بدل ما المستخدم يعتمد إنه يفتح الجرس بنفسه كل شوية
+        // بنتابع الإشعارات بين كل تحديث والتاني (نفس استدعاء get_my_notifications المستخدم في المودال أصلًا)
+        // عشان نحسب العداد ونكتشف أي match جديد غير مقروء من غير ما نضيف أي RPC تانية
         let lastNotifCount = 0;
         let notifCountKnown = false;
+        let lastSeenMatchNotifId = null;
 
         async function refreshNotifBadge() {
             const badge = document.getElementById('notif-badge');
             const tokens = Object.values(getLocalTokens());
             if (tokens.length === 0) { badge.classList.add('hidden'); return; }
             try {
-                const { data, error } = await sb.rpc('get_unread_notification_count', { p_tokens: tokens });
+                const { data, error } = await sb.rpc('get_my_notifications', { p_tokens: tokens });
                 if (error) { console.error(error); return; }
-                if (data > 0) { badge.textContent = data > 9 ? '9+' : data; badge.classList.remove('hidden'); }
+                const notifData = data || [];
+
+                const unreadCount = notifData.filter(n => !n.is_read).length;
+                if (unreadCount > 0) { badge.textContent = unreadCount > 9 ? '9+' : unreadCount; badge.classList.remove('hidden'); }
                 else { badge.classList.add('hidden'); }
 
-                const count = data || 0;
-                if (notifCountKnown && count > lastNotifCount) showNotifToast();
-                lastNotifCount = count;
+                // أحدث match غير مقروء وله رحلة مرتبطة (الترتيب الراجع من الـRPC أصلًا الأحدث فالأقدم)
+                const newestUnreadMatch = notifData.find(n => n.type === 'match' && !n.is_read && n.related_trip_id);
+                const isGenuinelyNewMatch = notifCountKnown && newestUnreadMatch && newestUnreadMatch.id !== lastSeenMatchNotifId;
+
+                if (isGenuinelyNewMatch) {
+                    showNotifToast(newestUnreadMatch);
+                } else if (notifCountKnown && !newestUnreadMatch && unreadCount > lastNotifCount) {
+                    // زيادة في العدد لكن مش بسبب match (مثلاً انضمام/خروج) — تنبيه عام بس
+                    showNotifToast(null);
+                }
+                if (newestUnreadMatch) lastSeenMatchNotifId = newestUnreadMatch.id;
+
+                lastNotifCount = unreadCount;
                 notifCountKnown = true;
             } catch (e) { console.error(e); }
         }
 
         let notifToastTimer;
-        function showNotifToast() {
+        function showNotifToast(matchNotif) {
             const toast = document.getElementById('notif-toast');
             if (!toast) return;
+            const titleEl = toast.querySelector('.notif-toast-title');
+            const subEl = toast.querySelector('.notif-toast-sub');
+            const btn = toast.querySelector('button');
+            if (matchNotif && matchNotif.related_trip_id) {
+                titleEl.textContent = '🎉 ظهر تطابق محتمل لبحثك';
+                subEl.textContent = '👈 شوف الرحلة';
+                btn.onclick = () => { toast.classList.remove('show'); openSingleTripModal(matchNotif.related_trip_id); };
+            } else {
+                titleEl.textContent = 'عندك تحديث جديد';
+                subEl.textContent = 'دوس هنا تشوف الإشعارات';
+                btn.onclick = openNotifFromToast;
+            }
             clearTimeout(notifToastTimer);
             toast.classList.add('show');
             notifToastTimer = setTimeout(() => toast.classList.remove('show'), 4500);
@@ -748,6 +774,9 @@
                 if (location.hash.startsWith('#trip=')) {
                     const sharedTripId = decodeURIComponent(location.hash.replace('#trip=', ''));
                     if (sharedTripId) openSingleTripModal(sharedTripId);
+                    // بنشيل الـ hash من الرابط بعد ما نستخدمه، عشان لو المستخدم قفل الكارت وعمل Refresh
+                    // الكارت ميرجعش يفتح تاني لوحده (كان بيفضل يفتح كل مرة لأن الـ hash فاضل في الرابط)
+                    history.replaceState(null, '', location.pathname + location.search);
                 }
             } catch (e) { console.error(e); }
         };
