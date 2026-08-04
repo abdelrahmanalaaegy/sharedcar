@@ -533,24 +533,32 @@
         }
 
         async function openWhatsApp(tripId, message) {
+            // بنفتح تاب فاضي فورًا وقت الضغطة، قبل أي await، عشان المتصفح (خصوصًا على الموبايل)
+            // يفضل يعتبرها فتحة ناتجة مباشرة عن تفاعل المستخدم، ويقدر يسلّمها لتطبيق واتساب صح
+            // بدل ما يفتحها بعد الـ await وتفضل عالقة على صفحة واتساب الويب من غير تحويل
+            const whatsappTab = window.open('', '_blank');
             try {
                 const { data, error } = await sb.rpc('get_trip_contact', { p_trip_id: tripId });
                 if (error) {
                     alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
                     console.error(error);
+                    if (whatsappTab) whatsappTab.close();
                     return;
                 }
                 const phone = extractPhoneFromRpcData(data);
                 if (!phone) {
                     alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
                     console.error('get_trip_contact returned an unexpected/empty shape:', data);
+                    if (whatsappTab) whatsappTab.close();
                     return;
                 }
                 const url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(phone)}` + (message ? `&text=${encodeURIComponent(message)}` : '');
-                window.open(url, '_blank');
+                if (whatsappTab) whatsappTab.location.href = url;
+                else window.open(url, '_blank'); // احتياطي لو التاب الفاضي اتحجب لأي سبب
             } catch (e) {
                 alert('حدث خطأ أثناء محاولة التواصل ❌');
                 console.error(e);
+                if (whatsappTab) whatsappTab.close();
             }
         }
 
