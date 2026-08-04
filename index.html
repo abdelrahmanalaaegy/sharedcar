@@ -1431,8 +1431,9 @@
 
             // أولوية لمشاركة النظام (Web Share API) — بتظهر واتساب وماسنجر وفيسبوك وأي تطبيق تاني
             // مثبت عند المستخدم نفسه، من غير ما نحتاج نبني رابط مخصص لكل منصة
+            // بنبعت اللينك بس (من غير الكابشن النصي) عشان يظهر بس البريفيو (كارت اللينك) في واتساب
             if (navigator.share) {
-                navigator.share({ text: text + '\n' + url }).catch(() => {});
+                navigator.share({ url: url }).catch(() => {});
             } else {
                 document.getElementById('share-sheet').classList.add('open');
             }
@@ -1443,19 +1444,19 @@
         }
 
         function shareVia(platform) {
-            const fullText = shareCtx.text + '\n' + shareCtx.url;
-            const encodedText = encodeURIComponent(fullText);
+            // بنبعت اللينك لوحده (من غير الكابشن النصي) عشان في واتساب/فيسبوك يظهر بس
+            // كارت البريفيو بتاع اللينك، من غير نص إضافي فوقه
             const encodedUrl = encodeURIComponent(shareCtx.url);
             if (platform === 'copy') {
-                navigator.clipboard.writeText(fullText)
-                    .then(() => alert('تم نسخ تفاصيل الرحلة ✅'))
+                navigator.clipboard.writeText(shareCtx.url)
+                    .then(() => alert('تم نسخ لينك الرحلة ✅'))
                     .catch(() => alert('حصل خطأ في النسخ ❌'));
                 closeShareSheet();
                 return;
             }
             const links = {
-                whatsapp: `https://wa.me/?text=${encodedText}`,
-                facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`,
+                whatsapp: `https://wa.me/?text=${encodedUrl}`,
+                facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
                 messenger: `fb-messenger://share/?link=${encodedUrl}`
             };
             window.open(links[platform], '_blank');
