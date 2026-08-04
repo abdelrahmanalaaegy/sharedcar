@@ -171,6 +171,10 @@
                 </div>
             </div>
 
+            <!-- سجّل رقمك (بدون تسجيل دخول) — كارت بسيط بيظهر في الصفحة الرئيسية عشان نجمع رقم المستخدم بدري
+                 حتى لو لسه ماعملش أي رحلة، وبرضه عشان لو جه يسجل رحلة يلاقي رقمه محفوظ من غير ما يكتبه تاني -->
+            <div id="home-phone-card" class="mt-6 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm text-right"></div>
+
             <!-- إنت عايز إيه؟ (تبويب تفاعلي واحد بدل تكرار الأزرار) -->
             <div class="mt-6 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm text-right">
                 <h2 class="text-base font-black text-slate-800 mb-4 text-center">إنت عايز إيه دلوقتي؟</h2>
@@ -266,7 +270,8 @@
                         <select id="in-ac" class="form-input text-xs font-black"><option value="true">✅ السيارة مكيفة</option><option value="false">❌ بدون تكييف</option></select>
                     </div>
                     <textarea id="in-notes" placeholder="ملاحظات إضافية (الشنط، المواعيد...)" class="form-input h-20 mb-3 font-bold text-right resize-none"></textarea>
-                    <input type="tel" id="in-phone" required placeholder="رقم واتسابك 01..." class="form-input text-center font-black border-2 border-[#00a884] text-lg">
+                    <!-- خانة الرقم اتشالت من هنا: رقم النشر بقى بياخده تلقائي من الرقم المحفوظ على الجهاز
+                         (نفس الرقم اللي اتسجل من كارت الصفحة الرئيسية)، ولو مفيش رقم محفوظ أصلًا هيتسأل عنه مرة واحدة بس عبر promptJoinPhone() -->
                     <button type="submit" id="btn-pub" class="btn-green p-4 text-xl font-black italic shadow-lg">نشر المشوار الآن 🚀</button>
                 </form>
             </div>
@@ -628,8 +633,7 @@
             saveMyPhone(p);
             alert('تم تحديث رقمك المحفوظ ✅');
             renderMyPhoneCard();
-            const inPhone = document.getElementById('in-phone');
-            if (inPhone) inPhone.value = p;
+            renderHomePhoneCard();
         }
         // بترسم كارت صغير في "رحلاتي" بيوضح الرقم المحفوظ دلوقتي وزرار تغييره
         function renderMyPhoneCard() {
@@ -640,6 +644,41 @@
                 ? `<div class="flex items-center justify-between gap-2 bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-blue-700 text-right">📱 رقمك المحفوظ على الجهاز ده: ${escapeHtml(phone)}</p><button onclick="changeMyPhone()" class="bg-blue-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button></div>`
                 : `<div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-amber-700 text-right">📱 لسه مفيش رقم محفوظ على الجهاز ده</p><button onclick="changeMyPhone()" class="bg-amber-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">إضافة رقمي</button></div>`;
         }
+        // ===== كارت "سجّل رقمك" في الصفحة الرئيسية =====
+        // مش تسجيل دخول: مجرد حفظ الرقم على الجهاز (زي getMyPhone/saveMyPhone) + إرساله لجدول leads
+        // في Supabase عشان نجمع أكبر عدد من الأرقام حتى لو المستخدم مايعملش رحلة أبدًا.
+        function renderHomePhoneCard() {
+            const el = document.getElementById('home-phone-card');
+            if (!el) return;
+            const phone = getMyPhone();
+            if (phone) {
+                el.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-[12px] font-black text-slate-700 text-right">📱 رقمك المحفوظ: ${escapeHtml(phone)}</p>
+                        <button onclick="changeMyPhone(); renderHomePhoneCard();" class="bg-slate-100 text-slate-600 text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button>
+                    </div>`;
+                return;
+            }
+            el.innerHTML = `
+                <h2 class="text-base font-black text-slate-800 mb-2 text-center">سجّل رقمك دلوقتي 📱</h2>
+                <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">من غير تسجيل دخول ولا باسورد. كده لو جيت تسجل مشوارك أو تنضم لرحلة هتلاقي رقمك جاهز من غير ما تكتبه تاني.</p>
+                <div class="flex gap-2">
+                    <input type="tel" id="home-phone-input" placeholder="01xxxxxxxxx" class="form-input text-center font-black flex-1">
+                    <button onclick="saveHomePhone()" class="btn-green px-5 text-sm">حفظ</button>
+                </div>`;
+        }
+
+        async function saveHomePhone() {
+            const input = document.getElementById('home-phone-input');
+            const raw = input.value.trim().replace(/[\s\-]/g, '');
+            if (!/^01[0125]\d{8}$/.test(raw)) return alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)");
+            saveMyPhone(raw);
+            renderHomePhoneCard();
+            // بنحاول نحفظ نسخة من الرقم في جدول leads كمان (لو الجدول مش موجود لسه في Supabase
+            // هيفشل بصمت من غير ما يأثر على تجربة المستخدم، اللي أهم حاجة إنها حفظت على جهازه)
+            try { await sb.from('leads').insert([{ phone: raw, source: 'home_banner' }]); } catch (e) { console.error(e); }
+        }
+
         function saveJoinedTrip(id, phone) {
             const j = getJoinedTrips(); j[id] = phone; localStorage.setItem('sr_joined', JSON.stringify(j));
         }
@@ -842,6 +881,7 @@
                 sb = supabase.createClient(SB_URL, SB_KEY);
                 fillDropdowns();
                 homeRoleSelect('captain');
+                renderHomePhoneCard();
                 await checkAdminSession();
                 trackVisit();
                 apiGetTrips();
@@ -884,11 +924,8 @@
             if(id === 'search') apiGetTrips();
             if(id === 'my') { apiGetMyTrips(); renderMyPhoneCard(); }
             if(id === 'post') {
-                // بنعبّي رقم النشر تلقائيًا من الرقم المحفوظ على الجهاز (لو موجود وحقل الرقم لسه فاضي)
-                // عشان محتاجش يكتبه تاني هنا كمان
-                const savedPhone = getMyPhone();
-                const inPhone = document.getElementById('in-phone');
-                if (savedPhone && inPhone && !inPhone.value) inPhone.value = savedPhone;
+                // خانة الرقم اتشالت من فورم النشر؛ الرقم بقى بياخده apiPost() تلقائيًا
+                // من getMyPhone()، أو بيسأل عنه promptJoinPhone() مرة واحدة لو مفيش رقم محفوظ خالص
             }
         }
 
@@ -1011,6 +1048,13 @@
             const h1 = document.getElementById('in-h1').value;
             const h2 = document.getElementById('in-h2').value;
             if(!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
+
+            // الرقم بقى بياخده الفورم تلقائيًا من الرقم المحفوظ على الجهاز، من غير خانة منفصلة في فورم النشر.
+            // لو مفيش رقم محفوظ خالص (أول مرة يستخدم فيها التطبيق) هيتسأل عنه مرة واحدة بس عبر promptJoinPhone()
+            // ونفس الدالة بتحفظه على طول عشان محتاجش يتسأل عنه تاني.
+            const myPhone = promptJoinPhone();
+            if (!myPhone) return;
+
             const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
 
             const token = genToken();
@@ -1018,7 +1062,7 @@
                 user_role: document.getElementById('in-role').value, origin: document.getElementById('in-o').value, destination: document.getElementById('in-d').value,
                 departure_time: h1 ? `${h1}:${document.getElementById('in-m1').value} ${document.getElementById('in-p1').value}` : '',
                 return_time: h2 ? `${h2}:${document.getElementById('in-m2').value} ${document.getElementById('in-p2').value}` : null,
-                whatsapp_number: "2" + document.getElementById('in-phone').value, notes: document.getElementById('in-notes').value,
+                whatsapp_number: "2" + myPhone, notes: document.getElementById('in-notes').value,
                 seats_available: document.getElementById('in-role').value === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
                 has_ac: document.getElementById('in-ac').value === "true",
                 price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "", status: 'active', joined_passengers: [],
@@ -1027,12 +1071,6 @@
             const { data, error } = await sb.from('trips').insert([payload]).select('id').single();
             if(!error && data) {
                 saveLocalToken(data.id, token);
-                // لو دي أول مرة يعمل فيها أي حاجة على الجهاز ده، بنحفظ الرقم اللي كتبه هنا كرقمه المحفوظ
-                // (من غير ما نلمس رقم محفوظ موجود بالفعل — التغيير بيبقى بس من زرار "تغيير رقمي")
-                if (!getMyPhone()) {
-                    const p = document.getElementById('in-phone').value.trim().replace(/[\s\-]/g, '');
-                    if (/^01[0125]\d{8}$/.test(p)) saveMyPhone(p);
-                }
                 alert('تم تسجيل مشوارك بنجاح! 🎉\nملحوظة: الرحلة اتربطت بجهازك ده تلقائي، فتقدر تعدّلها من قسم "رحلاتي" من نفس الجهاز.');
                 document.getElementById('postForm').reset(); uiTab('search');
                 refreshNotifBadge();
