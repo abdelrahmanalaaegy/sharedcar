@@ -69,12 +69,12 @@
         .share-btn:active { transform: scale(0.9); background: #e2e8f0; }
 
         /* شيت المشاركة (فولباك يدوي للأجهزة اللي مفيهاش مشاركة نظام) */
-        #share-sheet { position: fixed; inset: 0; z-index: 650; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #share-sheet { position: fixed; inset: 0; z-index: 750; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
         #share-sheet.open { display: flex; }
 
         /* شيت تأكيد فتح واتساب — بنفس نمط شيت المشاركة بالظبط، فيه رابط <a> حقيقي بيتم الضغط عليه فعليًا
            (متصفحات الموبايل مش بتسلّم الرابط لتطبيق واتساب إلا لو التنقل ناتج عن ضغطة حقيقية على <a>) */
-        #wa-confirm-sheet { position: fixed; inset: 0; z-index: 650; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #wa-confirm-sheet { position: fixed; inset: 0; z-index: 750; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
         #wa-confirm-sheet.open { display: flex; }
         .share-sheet-inner { background: #f8fafc; width: 100%; max-width: 420px; border-radius: 30px 30px 0 0; padding: 22px 18px 26px; animation: fofiUp 0.3s ease; }
         .share-options-row { display: flex; justify-content: space-around; margin-top: 18px; }
