@@ -82,6 +82,20 @@
         .stat-red { background: #7f1d1d !important; border-bottom: 4px solid #ef4444 !important; }
         .joined-list { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 15px; margin-top: 10px; }
 
+        /* تنبيه لحظي (Toast) بيظهر أعلى الشاشة لما يوصل إشعار جديد والمستخدم فاتح التطبيق */
+        #notif-toast { position: fixed; top: 14px; left: 50%; z-index: 800; width: calc(100% - 28px); max-width: 400px; transform: translate(-50%, -120%); opacity: 0; pointer-events: none; transition: transform 0.3s ease, opacity 0.3s ease; }
+        #notif-toast.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+        #notif-toast button { width: 100%; text-align: right; background: #0b3d36; color: white; border: none; border-radius: 20px; padding: 14px 18px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); cursor: pointer; }
+        #notif-toast .notif-toast-text { flex: 1; }
+        #notif-toast .notif-toast-title { font-weight: 900; font-size: 12.5px; }
+        #notif-toast .notif-toast-sub { font-weight: 700; font-size: 10.5px; opacity: 0.75; margin-top: 2px; }
+
+        /* حالات "لا نتائج" — كارت موحّد للبحث/رحلاتي/الرحلة الفردية، بنفس هوية الكروت التانية */
+        .no-results-card { background: white; border: 1px solid #f1f5f9; border-radius: 30px; padding: 40px 24px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        /* نبضة خفيفة تلفت الانتباه لزرار "سجل مشوارك" في حالة اللا-نتائج، من غير ما توحي إنها "تحميل" */
+        .pulse-loading { animation: pulse-cta-anim 2.2s ease-in-out infinite; }
+        @keyframes pulse-cta-anim { 0%, 100% { box-shadow: 0 8px 15px rgba(0,168,132,0.2); } 50% { box-shadow: 0 8px 22px rgba(0,168,132,0.45); } }
+
         /* ===== مساعد FOFi — زرار عائم ثابت أسفل يمين الشاشة، تحت زرار الرجوع لفوق ===== */
         #fofi-fab { position: fixed; bottom: 20px; right: 18px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #00a884, #0b3d36); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,168,132,0.45); border: none; z-index: 250; cursor: pointer; transition: transform 0.2s ease; }
         .fofi-avatar { display: inline-block; line-height: 0; }
@@ -310,6 +324,17 @@
         </div>
 
     </main>
+
+    <!-- تنبيه لحظي بوصول إشعار جديد (بيظهر لو المستخدم فاتح التطبيق فعليًا) -->
+    <div id="notif-toast">
+        <button onclick="openNotifFromToast()">
+            <span class="text-lg">🔔</span>
+            <span class="notif-toast-text">
+                <span class="notif-toast-title block">عندك تحديث جديد</span>
+                <span class="notif-toast-sub block">دوس هنا تشوف الإشعارات</span>
+            </span>
+        </button>
+    </div>
 
     <!-- زرار الرجوع لفوق -->
     <button id="scroll-top-btn" onclick="scrollToTop()" aria-label="الرجوع لفوق">
@@ -573,6 +598,11 @@
             } catch (e) { return ''; }
         }
 
+        // بنتابع عدد الإشعارات الغير مقروءة بين كل تحديث والتاني، عشان لو زاد وإحنا فاتحين التطبيق
+        // نظهر تنبيه لحظي (Toast) بدل ما المستخدم يعتمد إنه يفتح الجرس بنفسه كل شوية
+        let lastNotifCount = 0;
+        let notifCountKnown = false;
+
         async function refreshNotifBadge() {
             const badge = document.getElementById('notif-badge');
             const tokens = Object.values(getLocalTokens());
@@ -582,7 +612,25 @@
                 if (error) { console.error(error); return; }
                 if (data > 0) { badge.textContent = data > 9 ? '9+' : data; badge.classList.remove('hidden'); }
                 else { badge.classList.add('hidden'); }
+
+                const count = data || 0;
+                if (notifCountKnown && count > lastNotifCount) showNotifToast();
+                lastNotifCount = count;
+                notifCountKnown = true;
             } catch (e) { console.error(e); }
+        }
+
+        let notifToastTimer;
+        function showNotifToast() {
+            const toast = document.getElementById('notif-toast');
+            if (!toast) return;
+            clearTimeout(notifToastTimer);
+            toast.classList.add('show');
+            notifToastTimer = setTimeout(() => toast.classList.remove('show'), 4500);
+        }
+        function openNotifFromToast() {
+            document.getElementById('notif-toast').classList.remove('show');
+            openNotifications();
         }
 
         async function openNotifications() {
@@ -602,18 +650,26 @@
                 return;
             }
             if (!data || data.length === 0) {
-                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">مفيش إشعارات لسه</p>`;
+                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm leading-relaxed">لسه مفيش تحديثات.<br>لما حد يهتم بمشوارك أو يظهر تطابق مناسب، هتلاقيه هنا 🔔</p>`;
                 return;
             }
             // ملاحظة: كانت هنا فلترة بتخفي إشعارات "status_change" من العرض، بس بقت مش محتاجة
             // لأن الباك اند (trg_trips_after_write) بقى أصلًا مش بيدرّج إشعارات status_change في الجدول من الجذر.
             if (data.length === 0) {
-                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">مفيش إشعارات لسه</p>`;
+                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm leading-relaxed">لسه مفيش تحديثات.<br>لما حد يهتم بمشوارك أو يظهر تطابق مناسب، هتلاقيه هنا 🔔</p>`;
             } else {
-            list.innerHTML = data.map(n => {
+            // بنقدّم إشعارات "التطابق" الغير مقروءة الأول، لأنها الأهم للمستخدم، وبعدين الباقي بترتيبه الأصلي (الأحدث فالأقدم)
+            const sortedData = [...data].sort((a, b) => {
+                const aPriority = (a.type === 'match' && !a.is_read) ? 1 : 0;
+                const bPriority = (b.type === 'match' && !b.is_read) ? 1 : 0;
+                return bPriority - aPriority;
+            });
+            list.innerHTML = sortedData.map(n => {
                 const clickable = n.type === 'match' && n.related_trip_id;
+                const isMatchUnread = n.type === 'match' && !n.is_read;
+                const styleClass = n.is_read ? 'bg-gray-50 border-gray-100' : (isMatchUnread ? 'bg-orange-50 border-orange-300' : 'bg-emerald-50 border-emerald-200');
                 return `
-                <div class="p-3 rounded-2xl border ${n.is_read ? 'bg-gray-50 border-gray-100' : 'bg-emerald-50 border-emerald-200'} ${clickable ? 'cursor-pointer active:scale-95 transition' : ''}"
+                <div class="p-3 rounded-2xl border ${styleClass} ${clickable ? 'cursor-pointer active:scale-95 transition' : ''}"
                      ${clickable ? `onclick="openSingleTripModal('${n.related_trip_id}')"` : ''}>
                     <div class="flex items-start gap-2">
                         <span class="text-lg">${NOTIF_ICONS[n.type] || '🔔'}</span>
@@ -621,7 +677,7 @@
                             <p class="font-black text-xs text-slate-800">${escapeHtml(n.title)}</p>
                             ${n.body ? `<p class="text-[11px] text-gray-500 font-bold mt-1">${escapeHtml(n.body)}</p>` : ''}
                             <p class="text-[9px] text-gray-400 font-bold mt-1">${fmtNotifTime(n.created_at)}</p>
-                            ${clickable ? `<p class="text-[10px] text-[#00a884] font-black mt-2">👈 دوس هنا تشوف الرحلة</p>` : ''}
+                            ${clickable ? `<p class="text-[10px] text-orange-600 font-black mt-2">👈 دوس هنا تشوف الرحلة</p>` : ''}
                         </div>
                     </div>
                 </div>
