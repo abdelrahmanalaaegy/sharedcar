@@ -597,6 +597,35 @@
         function getJoinedTrips() {
             try { return JSON.parse(localStorage.getItem('sr_joined') || '{}'); } catch (e) { return {}; }
         }
+        // بيحفظ رقم تليفون المستخدم نفسه على الجهاز، عشان نعيد استخدامه تلقائيًا في كل حجز/انضمام
+        // جديد بدل ما نسأله يكتبه من الأول في كل مرة (وده كمان بيقلل احتمال إنه يكتب رقم حد تاني بالغلط
+        // أو بيهزر بيه، لأنه هيحتاج يلغي التأكيد بوعي عشان يستخدم رقم مختلف عن اللي محفوظ)
+        function getMyPhone() {
+            try { return localStorage.getItem('sr_my_phone') || ''; } catch (e) { return ''; }
+        }
+        function saveMyPhone(phone) {
+            try { localStorage.setItem('sr_my_phone', phone); } catch (e) {}
+        }
+        // بيرجع رقم صالح للحجز/الانضمام: لو الجهاز فاكر رقم محفوظ، بيأكد معاه إنه يستخدمه (وبيدّيله فرصة
+        // واعية يكتب رقم مختلف لو مش هو)؛ لو مفيش رقم محفوظ، بيسأله يكتبه لأول مرة ويحفظه لحد بعد كده
+        function promptJoinPhone() {
+            const saved = getMyPhone();
+            if (saved) {
+                if (confirm(`هتنضم/تحجز برقمك المحفوظ على الجهاز ده: ${saved}\nتأكيد؟`)) return saved;
+                const raw = prompt("لو الرقم مختلف، اكتب رقمك الصحيح (01xxxxxxxxx):");
+                if (!raw) return null;
+                const p = raw.trim().replace(/[\s\-]/g, '');
+                if (!/^01[0125]\d{8}$/.test(p)) { alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)"); return null; }
+                saveMyPhone(p);
+                return p;
+            }
+            const raw = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
+            if (!raw) return null;
+            const p = raw.trim().replace(/[\s\-]/g, '');
+            if (!/^01[0125]\d{8}$/.test(p)) { alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)"); return null; }
+            saveMyPhone(p);
+            return p;
+        }
         function saveJoinedTrip(id, phone) {
             const j = getJoinedTrips(); j[id] = phone; localStorage.setItem('sr_joined', JSON.stringify(j));
         }
@@ -1117,10 +1146,8 @@
 
         async function joinAction(tripId, origin, dest, ownerRole) {
             if (busyActions.has(tripId)) return;
-            const raw = prompt("أدخل رقم تليفونك للانضمام (01xxxxxxxxx):");
-            if(!raw) return;
-            const newP = raw.trim().replace(/[\s\-]/g, '');
-            if(!/^01[0125]\d{8}$/.test(newP)) return alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)");
+            const newP = promptJoinPhone();
+            if (!newP) return;
             busyActions.add(tripId);
             try {
                 const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
