@@ -641,24 +641,24 @@
             if (!el) return;
             const phone = getMyPhone();
             el.innerHTML = phone
-                ? `<div class="flex items-center justify-between gap-2 bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-blue-700 text-right">📱 رقمك المحفوظ على الجهاز ده: ${escapeHtml(phone)}</p><button onclick="changeMyPhone()" class="bg-blue-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button></div>`
-                : `<div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-amber-700 text-right">📱 لسه مفيش رقم محفوظ على الجهاز ده</p><button onclick="changeMyPhone()" class="bg-amber-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">إضافة رقمي</button></div>`;
+                ? `<div class="flex items-center justify-between gap-2 bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-blue-700 text-right">📱 رقم تسجيلك المحفوظ: ${escapeHtml(phone)}</p><button onclick="changeMyPhone()" class="bg-blue-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button></div>`
+                : `<div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-amber-700 text-right">📱 لسه مفيش رقم تسجيل محفوظ على الجهاز ده</p><button onclick="changeMyPhone()" class="bg-amber-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">إضافة رقمي</button></div>`;
         }
         // ===== كارت "سجّل رقمك" في الصفحة الرئيسية =====
         // مش تسجيل دخول: مجرد حفظ الرقم على الجهاز (زي getMyPhone/saveMyPhone) + إرساله لجدول leads
         // في Supabase عشان نجمع أكبر عدد من الأرقام حتى لو المستخدم مايعملش رحلة أبدًا.
+        // ده بيظهر بس للمستخدم اللي لسه مسجّلش رقمه خالص. لو الرقم محفوظ بالفعل، الكارت ده بيتخبى
+        // تمامًا من الصفحة الرئيسية (مش بس فاضي) — "رقم تسجيلك" المحفوظ بيبان بعد كده في "رحلاتي" بس (renderMyPhoneCard).
         function renderHomePhoneCard() {
             const el = document.getElementById('home-phone-card');
             if (!el) return;
             const phone = getMyPhone();
             if (phone) {
-                el.innerHTML = `
-                    <div class="flex items-center justify-between gap-2">
-                        <p class="text-[12px] font-black text-slate-700 text-right">📱 رقمك المحفوظ: ${escapeHtml(phone)}</p>
-                        <button onclick="changeMyPhone(); renderHomePhoneCard();" class="bg-slate-100 text-slate-600 text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button>
-                    </div>`;
+                el.style.display = 'none';
+                el.innerHTML = '';
                 return;
             }
+            el.style.display = '';
             el.innerHTML = `
                 <h2 class="text-base font-black text-slate-800 mb-2 text-center">سجّل رقمك دلوقتي 📱</h2>
                 <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">من غير تسجيل دخول ولا باسورد. كده لو جيت تسجل مشوارك أو تنضم لرحلة هتلاقي رقمك جاهز من غير ما تكتبه تاني.</p>
