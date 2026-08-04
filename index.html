@@ -71,6 +71,11 @@
         /* شيت المشاركة (فولباك يدوي للأجهزة اللي مفيهاش مشاركة نظام) */
         #share-sheet { position: fixed; inset: 0; z-index: 650; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
         #share-sheet.open { display: flex; }
+
+        /* شيت تأكيد فتح واتساب — بنفس نمط شيت المشاركة بالظبط، فيه رابط <a> حقيقي بيتم الضغط عليه فعليًا
+           (متصفحات الموبايل مش بتسلّم الرابط لتطبيق واتساب إلا لو التنقل ناتج عن ضغطة حقيقية على <a>) */
+        #wa-confirm-sheet { position: fixed; inset: 0; z-index: 650; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #wa-confirm-sheet.open { display: flex; }
         .share-sheet-inner { background: #f8fafc; width: 100%; max-width: 420px; border-radius: 30px 30px 0 0; padding: 22px 18px 26px; animation: fofiUp 0.3s ease; }
         .share-options-row { display: flex; justify-content: space-around; margin-top: 18px; }
         .share-opt { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; }
@@ -491,6 +496,19 @@
         </div>
     </div>
 
+    <!-- شيت تأكيد فتح واتساب — فيه رابط <a> حقيقي (بضغطة حقيقية من المستخدم) عشان متصفح الموبايل
+         يقدر يسلّم التنقل لتطبيق واتساب المتثبت، بدل ما يفتح صفحة واتساب ويب -->
+    <div id="wa-confirm-sheet" onclick="if(event.target===this) closeWaConfirmSheet()">
+        <div class="share-sheet-inner" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between">
+                <h3 class="font-black text-slate-800 text-sm">تواصل واتساب 💬</h3>
+                <button onclick="closeWaConfirmSheet()" class="text-gray-400 text-2xl leading-none px-1">×</button>
+            </div>
+            <p class="text-[11px] text-gray-500 font-bold mt-2 mb-4 leading-relaxed">دوس على الزرار عشان يفتح تطبيق واتساب مباشرة</p>
+            <a id="wa-confirm-link" href="#" onclick="closeWaConfirmSheet()" class="btn-green w-full text-center block text-sm py-4">فتح واتساب الآن 💬</a>
+        </div>
+    </div>
+
     <script>
         const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
@@ -533,33 +551,37 @@
         }
 
         async function openWhatsApp(tripId, message) {
-            // بنفتح تاب فاضي فورًا وقت الضغطة، قبل أي await، عشان المتصفح (خصوصًا على الموبايل)
-            // يفضل يعتبرها فتحة ناتجة مباشرة عن تفاعل المستخدم، ويقدر يسلّمها لتطبيق واتساب صح
-            // بدل ما يفتحها بعد الـ await وتفضل عالقة على صفحة واتساب الويب من غير تحويل
-            const whatsappTab = window.open('', '_blank');
             try {
                 const { data, error } = await sb.rpc('get_trip_contact', { p_trip_id: tripId });
                 if (error) {
                     alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
                     console.error(error);
-                    if (whatsappTab) whatsappTab.close();
                     return;
                 }
                 const phone = extractPhoneFromRpcData(data);
                 if (!phone) {
                     alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
                     console.error('get_trip_contact returned an unexpected/empty shape:', data);
-                    if (whatsappTab) whatsappTab.close();
                     return;
                 }
                 const url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(phone)}` + (message ? `&text=${encodeURIComponent(message)}` : '');
-                if (whatsappTab) whatsappTab.location.href = url;
-                else window.open(url, '_blank'); // احتياطي لو التاب الفاضي اتحجب لأي سبب
+                // متصفحات الموبايل (خصوصًا iOS Safari) مش بتسلّم رابط واتساب لتطبيق واتساب المتثبت
+                // إلا لو التنقل ناتج عن ضغطة حقيقية على عنصر <a href> فعلي — مش عن window.open/location.href
+                // بالسكريبت. وبما إن الرقم لازم يتجاب async من RPC آمنة الأول، مينفعش نعمل التنقل التلقائي
+                // في نفس اللحظة. الحل: نعرض شيت تأكيد بسيط فيه رابط <a> حقيقي المستخدم بيدوس عليه بنفسه.
+                showWhatsAppConfirmSheet(url);
             } catch (e) {
                 alert('حدث خطأ أثناء محاولة التواصل ❌');
                 console.error(e);
-                if (whatsappTab) whatsappTab.close();
             }
+        }
+
+        function showWhatsAppConfirmSheet(url) {
+            document.getElementById('wa-confirm-link').href = url;
+            document.getElementById('wa-confirm-sheet').classList.add('open');
+        }
+        function closeWaConfirmSheet() {
+            document.getElementById('wa-confirm-sheet').classList.remove('open');
         }
 
         function genToken() {
