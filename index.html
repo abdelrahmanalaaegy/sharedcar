@@ -1417,24 +1417,17 @@
             lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
         }
 
-        async function shareTrip(text, tripId, imgData) {
-            // بنحط الرحلة نفسها في الرابط (#trip=ID) عشان لما حد يدوس على اللينك يدخل على تفاصيل
-            // الرحلة دي بالظبط، مش الصفحة الرئيسية بس. بيتقرا تلقائيًا في window.onload تحت.
-            const url = location.origin + location.pathname + '#trip=' + encodeURIComponent(tripId);
-            shareCtx = { text, url };
+        // رابط Supabase Edge Function اللي بيولّد صفحة بريفيو (عنوان + صورة الراكب/الكابتن) لكل رحلة
+        // ويحوّل تلقائيًا لكارت الرحلة جوه التطبيق. راجع ملف supabase/functions/share-trip/index.ts
+        const SHARE_FN_URL = SB_URL + "/functions/v1/share-trip";
 
-            // 🆕 لو المتصفح بيدعم مشاركة ملفات، نحاول نولّد صورة تشويقية ونشاركها كصورة فعلية
-            // (مش بس لينك)؛ أي فشل في التوليد أو المشاركة بيرجعنا تلقائيًا للسلوك النصي القديم تحت
-            if (imgData && navigator.share && navigator.canShare) {
-                try {
-                    const blob = await generateTripShareImage(imgData);
-                    const file = new File([blob], 'shareride-trip.png', { type: 'image/png' });
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({ files: [file], text: text + '\n' + url });
-                        return;
-                    }
-                } catch (e) { /* هنكمل على الـ fallback تحت من غير ما نوقف المستخدم بأي خطأ */ }
-            }
+        async function shareTrip(text, tripId, imgData) {
+            // بدل ما نبعت لينك التطبيق مباشرة أو صورة مولّدة، بنبعت لينك صفحة البريفيو
+            // (Edge Function) اللي فيها og:image الثابتة المناسبة للرحلة + عنوان ديناميكي.
+            // واتساب/ماسنجر بيقروا الـ meta tags من الصفحة دي، وتاب المستخدم عليها بيوديه
+            // مباشرة لكارت الرحلة جوه التطبيق (مفيش صورة مرفقة تتفتح لوحدها تاني).
+            const url = SHARE_FN_URL + '?id=' + encodeURIComponent(tripId);
+            shareCtx = { text, url };
 
             // أولوية لمشاركة النظام (Web Share API) — بتظهر واتساب وماسنجر وفيسبوك وأي تطبيق تاني
             // مثبت عند المستخدم نفسه، من غير ما نحتاج نبني رابط مخصص لكل منصة
