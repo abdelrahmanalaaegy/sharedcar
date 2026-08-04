@@ -431,17 +431,6 @@
         </div>
     </div>
 
-    <!-- مودال النجاح والواتساب الصاروخي -->
-    <div id="join-success-modal" class="hidden fixed inset-0 z-[600] bg-black/80 flex items-center justify-center p-6 text-center">
-        <div class="bg-white rounded-[3rem] p-8 max-w-sm w-full space-y-5 shadow-2xl border-4 border-[#00a884]">
-            <div class="text-5xl animate-bounce">✅</div>
-            <h2 id="modal-title" class="font-black text-xl text-slate-800">تم بنجاح!</h2>
-            <p id="modal-desc" class="text-gray-500 font-bold text-sm leading-relaxed"></p>
-            <button id="direct-wa-btn" class="btn-green py-5 text-md font-black shadow-emerald-200 w-full">إبلاغ الطرف الآخر واتساب 💬</button>
-            <button onclick="document.getElementById('join-success-modal').classList.add('hidden')" class="text-gray-400 font-bold text-xs underline">إغلاق</button>
-        </div>
-    </div>
-
     <!-- مودال الإشعارات -->
     <!-- الضغط على أي حتة في الخلفية الغامقة بيقفل المودال زي زرار X بالظبط، والضغط جوه الكارت الأبيض نفسه مابيقفلوش -->
     <div id="notif-modal" class="hidden fixed inset-0 z-[600] bg-black/70 flex items-center justify-center p-4" onclick="closeNotifications()">
@@ -501,10 +490,10 @@
     <div id="wa-confirm-sheet" onclick="if(event.target===this) closeWaConfirmSheet()">
         <div class="share-sheet-inner" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between">
-                <h3 class="font-black text-slate-800 text-sm">تواصل واتساب 💬</h3>
+                <h3 id="wa-confirm-title" class="font-black text-slate-800 text-sm">تواصل واتساب 💬</h3>
                 <button onclick="closeWaConfirmSheet()" class="text-gray-400 text-2xl leading-none px-1">×</button>
             </div>
-            <p class="text-[11px] text-gray-500 font-bold mt-2 mb-4 leading-relaxed">دوس على الزرار عشان يفتح تطبيق واتساب مباشرة</p>
+            <p id="wa-confirm-subtitle" class="text-[11px] text-gray-500 font-bold mt-2 mb-4 leading-relaxed">دوس على الزرار عشان يفتح تطبيق واتساب مباشرة</p>
             <a id="wa-confirm-link" href="#" onclick="closeWaConfirmSheet()" class="btn-green w-full text-center block text-sm py-4">فتح واتساب الآن 💬</a>
         </div>
     </div>
@@ -550,7 +539,7 @@
             return '';
         }
 
-        async function openWhatsApp(tripId, message) {
+        async function openWhatsApp(tripId, message, sheetTitle, sheetSubtitle) {
             try {
                 const { data, error } = await sb.rpc('get_trip_contact', { p_trip_id: tripId });
                 if (error) {
@@ -572,15 +561,17 @@
                 // إلا لو التنقل ناتج عن ضغطة حقيقية على عنصر <a href> فعلي — مش عن window.open/location.href
                 // بالسكريبت. وبما إن الرقم لازم يتجاب async من RPC آمنة الأول، مينفعش نعمل التنقل التلقائي
                 // في نفس اللحظة. الحل: نعرض شيت تأكيد بسيط فيه رابط <a> حقيقي المستخدم بيدوس عليه بنفسه.
-                showWhatsAppConfirmSheet(url);
+                showWhatsAppConfirmSheet(url, sheetTitle, sheetSubtitle);
             } catch (e) {
                 alert('حدث خطأ أثناء محاولة التواصل ❌');
                 console.error(e);
             }
         }
 
-        function showWhatsAppConfirmSheet(url) {
+        function showWhatsAppConfirmSheet(url, title, subtitle) {
             document.getElementById('wa-confirm-link').href = url;
+            document.getElementById('wa-confirm-title').textContent = title || 'تواصل واتساب 💬';
+            document.getElementById('wa-confirm-subtitle').textContent = subtitle || 'دوس على الزرار عشان يفتح تطبيق واتساب مباشرة';
             document.getElementById('wa-confirm-sheet').classList.add('open');
         }
         function closeWaConfirmSheet() {
@@ -1134,11 +1125,12 @@
 
                 let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
 
-                // إعداد زرار الواتساب في المودال - الرقم بيتجاب وقت الضغط فقط عبر RPC آمنة، مش متسرّب في الـ DOM
-                document.getElementById('direct-wa-btn').onclick = () => openWhatsApp(tripId, msg);
-                document.getElementById('modal-title').innerText = ownerRole === 'captain' ? "تم الحجز مع الكابتن! ✅" : "تم الانضمام للمجموعة! 🤝";
-                document.getElementById('modal-desc').innerText = "اضغط على الزرار تحت عشان تبعت رسالة تأكيد للطرف التاني وتثبت ميعادك.";
-                document.getElementById('join-success-modal').classList.remove('hidden');
+                // بدل ما نعرض مودال نجاح منفصل وبعدين شيت واتساب تاني بنفس المعنى، بنروح على طول
+                // لشيت واتساب (الرقم بيتجاب وقت الضغط فقط عبر RPC آمنة، مش متسرّب في الـ DOM)
+                // وبندمج رسالة النجاح جوه نفس الشيت عشان تبقى خطوة واحدة بس
+                const successTitle = ownerRole === 'captain' ? "تم الحجز مع الكابتن! ✅" : "تم الانضمام للمجموعة! 🤝";
+                const successSubtitle = "دوس على الزرار عشان تبعت رسالة تأكيد للطرف التاني على واتساب وتثبتوا ميعادكم 💬";
+                openWhatsApp(tripId, msg, successTitle, successSubtitle);
                 apiGetTrips();
                 refreshNotifBadge();
             } finally {
