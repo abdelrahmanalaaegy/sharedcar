@@ -282,6 +282,7 @@
             <div class="bg-white p-7 rounded-[2.5rem] border-2 border-black mb-6 shadow-sm">
                 <h2 class="font-black mb-3 italic text-xl">إدارة رحلاتي 👤</h2>
                 <p class="text-[11px] text-gray-400 font-bold leading-relaxed">رحلاتك من الجهاز ده بس 📱</p>
+                <button onclick="linkTripByCodeOnly()" class="w-full mt-4 bg-orange-500 text-white py-3 rounded-2xl font-black text-[13px] shadow-md">🔑 عندي كود إدارة رحلة قديمة</button>
             </div>
             <div id="my-phone-card"></div>
             <div id="list-mine"></div>
@@ -700,6 +701,19 @@
             refreshNotifBadge();
         }
 
+        // 🆕 زي linkTripWithCode بالظبط، بس من غير ما نحتاج نعرف id الرحلة الأول —
+        // بيدور على الرحلة بالكود نفسه عن طريق find_trip_by_mgmt_code (RPC جديدة في Supabase)
+        async function linkTripByCodeOnly() {
+            const code = prompt('اكتب هنا كود إدارة الرحلة اللي وصلك:');
+            if (!code) return;
+            const { data: tripId, error } = await sb.rpc('find_trip_by_mgmt_code', { p_token: code.trim() });
+            if (error || !tripId) { alert('الكود غير صحيح ❌'); return; }
+            saveLocalToken(tripId, code.trim());
+            alert('تم ربط الرحلة بجهازك ✅ دلوقتي تقدر تشوفها من "رحلاتي".');
+            apiGetMyTrips();
+            refreshNotifBadge();
+        }
+
         // ===== الإشعارات (ماتشينج + تحديثات) =====
         const NOTIF_ICONS = { match: '🎉', joined: '🤝', left: '👋', status_change: '🔄' };
 
@@ -1011,7 +1025,7 @@
         // 🧩 نفس كارت "مفيش رحلات مربوطة بالجهاز ده" كان بيتكرر مرتين بالظبط جوه apiGetMyTrips
         // (لما مفيش tokens خالص، ولما فيه tokens بس كل الرحلات archived)، فبقى في مكان واحد بس.
         function noLinkedTripsCard() {
-            return `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك الأول دلوقتي، أو لو نشرت رحلة قبل كده من جهاز تاني، FOFi هيساعدك ترجعها.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic mb-2">سجل مشوارك الآن ➕</button><button onclick="openFofi('oldcode')" class="w-full bg-orange-500 text-white py-3 rounded-2xl font-black text-[13px] shadow-md">🔑 رجّع رحلاتك القديمة</button></div>`;
+            return `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك الأول دلوقتي، أو لو نشرت رحلة قبل كده من جهاز تاني، FOFi هيساعدك ترجعها.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic mb-2">سجل مشوارك الآن ➕</button><button onclick="linkTripByCodeOnly()" class="w-full bg-orange-500 text-white py-3 rounded-2xl font-black text-[13px] shadow-md">🔑 رجّع رحلاتك القديمة</button></div>`;
         }
 
         async function apiGetMyTrips() {
