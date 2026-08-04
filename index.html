@@ -506,6 +506,11 @@
         let tripsPublic = [];
         let tripsMine = [];
         let tripsAdmin = [];
+        // بيتابعوا حالة مودال "الرحلة الواحدة" المفتوح حاليًا (لو مفتوح) عشان أي إجراء (حجز/إلغاء/إزالة منضم/تعديل)
+        // يقدر يعيد رسم نفس الكارت جوه المودال بعد نجاحه، بدل ما يفضل زرار/عداد المقاعد قديم على الشاشة
+        // مع إن التغيير فعلاً حصل في قاعدة البيانات (وده اللي كان بيسبب لبس "الزرار مش بيتغير")
+        let openModalTripId = null;
+        let openModalTripMode = null; // 'public' (رحلة حد تاني) أو 'my' (رحلتي أنا، بالتفاصيل الكاملة)
 
         // أعمدة العرض العام (من الـ View public_trips) - متعمّد مفيهاش whatsapp_number ولا mgmt_code
         // عشان الرقم ميوصلش لـ HTML/DOM/Network خالص؛ التواصل بيتم فقط عبر RPC: get_trip_contact
@@ -715,12 +720,17 @@
                 return bPriority - aPriority;
             });
             list.innerHTML = sortedData.map(n => {
-                const clickable = n.type === 'match' && n.related_trip_id;
+                // إشعار "تطابق" بيودي لعرض رحلة حد تاني (وضع public)، أما "حد انضم/سيب رحلتك" فبيودي لرحلتك
+                // إنت بالتفاصيل الكاملة (وضع my) عشان تشوف رقم المنضم فورًا زي ما بيظهر في "رحلاتي"
+                const isMatch = n.type === 'match' && !!n.related_trip_id;
+                const isOwnTripUpdate = (n.type === 'joined' || n.type === 'left') && !!n.trip_id;
+                const clickable = isMatch || isOwnTripUpdate;
+                const clickTarget = isMatch ? `openSingleTripModal('${n.related_trip_id}')` : (isOwnTripUpdate ? `openOwnTripModal('${n.trip_id}')` : '');
                 const isMatchUnread = n.type === 'match' && !n.is_read;
                 const styleClass = n.is_read ? 'bg-gray-50 border-gray-100' : (isMatchUnread ? 'bg-orange-50 border-orange-300' : 'bg-emerald-50 border-emerald-200');
                 return `
                 <div class="p-3 rounded-2xl border ${styleClass} ${clickable ? 'cursor-pointer active:scale-95 transition' : ''}"
-                     ${clickable ? `onclick="openSingleTripModal('${n.related_trip_id}')"` : ''}>
+                     ${clickable ? `onclick="${clickTarget}"` : ''}>
                     <div class="flex items-start gap-2">
                         <span class="text-lg">${NOTIF_ICONS[n.type] || '🔔'}</span>
                         <div class="flex-1 text-right">
@@ -1065,6 +1075,7 @@
             closeEdit();
             apiGetMyTrips();
             apiGetTrips();
+            refreshOpenTripModal(id);
         }
 
         async function tripAction(id, act, mode) {
@@ -1095,6 +1106,7 @@
                     apiGetMyTrips();
                 }
                 apiGetTrips();
+                refreshOpenTripModal(id);
             } catch (e) {
                 alert('فشل تنفيذ الإجراء ❌: ' + e.message);
                 console.error(e);
@@ -1132,6 +1144,7 @@
                 const successSubtitle = "دوس على الزرار عشان تبعت رسالة تأكيد للطرف التاني على واتساب وتثبتوا ميعادكم 💬";
                 openWhatsApp(tripId, msg, successTitle, successSubtitle);
                 apiGetTrips();
+                refreshOpenTripModal(tripId);
                 refreshNotifBadge();
             } finally {
                 busyActions.delete(tripId);
@@ -1150,6 +1163,7 @@
                 removeJoinedTripLocal(tripId);
                 alert('تم خروجك من المجموعة بنجاح ✅');
                 apiGetTrips();
+                refreshOpenTripModal(tripId);
             } catch (e) {
                 // لو السبب إن الناشر/الكابتن كان مسبقًا شالك من الرحلة (أو المقعد)،
                 // منعرضش رسالة "فشل" فنية، ونظهر رسالة ودّية بدل ما تسبب زعل بين الطرفين
@@ -1158,6 +1172,7 @@
                     removeJoinedTripLocal(tripId);
                     alert('تم حذفك من الرحلة ✅');
                     apiGetTrips();
+                    refreshOpenTripModal(tripId);
                 } else {
                     alert('فشل ❌: ' + e.message);
                     console.error(e);
@@ -1185,6 +1200,7 @@
                     apiGetMyTrips();
                 }
                 apiGetTrips();
+                refreshOpenTripModal(tripId);
             } catch (e) {
                 alert('فشل ❌: ' + e.message);
                 console.error(e);
@@ -1319,6 +1335,8 @@
             const modal = document.getElementById('single-trip-modal');
             const content = document.getElementById('single-trip-content');
             modal.classList.remove('hidden');
+            openModalTripId = tripId;
+            openModalTripMode = 'public';
             content.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل الرحلة...</p>';
 
             const { data, error } = await sb.from('public_trips').select(PUBLIC_TRIP_COLS).eq('id', tripId).maybeSingle();
@@ -1333,8 +1351,48 @@
             content.innerHTML = card(data, 'public');
         }
 
+        // بيفتح مودال فيه رحلة إنت صاحبها (كابتن أو مجموعة)، بالتفاصيل الكاملة زي وضع "رحلاتي" بالظبط
+        // (رقم/أرقام المنضمين وأزرار الإدارة)، مش وضع "public" المحدود. بيتنادى من إشعار "حد انضم لرحلتك"
+        async function openOwnTripModal(tripId) {
+            closeNotifications();
+            const modal = document.getElementById('single-trip-modal');
+            const content = document.getElementById('single-trip-content');
+            modal.classList.remove('hidden');
+            openModalTripId = tripId;
+            openModalTripMode = 'my';
+            content.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل الرحلة...</p>';
+
+            const token = getLocalToken(tripId);
+            if (!token) {
+                content.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">😕</div><h3 class="text-slate-700 font-black mb-2 text-lg">الرحلة دي مش مربوطة بجهازك</h3><p class="text-gray-500 text-sm font-bold leading-relaxed">جرب تفتحها من "رحلاتي" أو اربطها بكود الإدارة الأول.</p></div>`;
+                return;
+            }
+            const { data, error } = await sb.rpc('get_my_trips_by_tokens', { p_tokens: [token] });
+            const trip = (data || []).find(t => t.id === tripId);
+
+            if (error || !trip) {
+                content.innerHTML = `<div class="no-results-card"><div class="text-4xl mb-4">😕</div><h3 class="text-slate-700 font-black mb-2 text-lg">الرحلة دي مبقتش متاحة</h3><p class="text-gray-500 text-sm font-bold leading-relaxed">يمكن اتحذفت. جرب تشوف "رحلاتي" بدلها.</p></div>`;
+                return;
+            }
+
+            tripsMine = tripsMine.filter(t => t.id !== trip.id).concat([trip]);
+            content.innerHTML = card(trip, 'my');
+        }
+
+        // بيعيد رسم الكارت جوه مودال "الرحلة الواحدة" (لو لسه مفتوح لنفس الرحلة دي) بعد أي إجراء ناجح
+        // (حجز/إلغاء/إزالة منضم/تعديل) عشان الزرار وعداد المقاعد يعكسوا الحالة الجديدة فورًا
+        function refreshOpenTripModal(tripId) {
+            const modal = document.getElementById('single-trip-modal');
+            if (!modal || modal.classList.contains('hidden')) return;
+            if (openModalTripId !== tripId) return;
+            if (openModalTripMode === 'my') openOwnTripModal(tripId);
+            else openSingleTripModal(tripId);
+        }
+
         function closeSingleTripModal() {
             document.getElementById('single-trip-modal').classList.add('hidden');
+            openModalTripId = null;
+            openModalTripMode = null;
         }
 
         async function apiAdminLogin() {
