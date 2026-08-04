@@ -1317,11 +1317,125 @@
         // بيحتفظ بنص وآخر رابط تمت مشاركتهم عشان أزرار الشيت (شيت الفولباك) تقدر توصل لهم وقت الضغط
         let shareCtx = { text: '', url: '' };
 
-        function shareTrip(text, tripId) {
+        // 🆕 توليد صورة تشويقية للرحلة (كابتن/راكب) عشان تتشارك كصورة فعلية على واتساب
+        // بدل نص عادي بس — بتعرض جزء من التفاصيل وتخلي الجزء "المغري" (السعر/تفاصيل الانضمام)
+        // مبلور عمدًا، عشان تشجع المستقبِل يدخل على الموقع نفسه بدل ما توصله كل حاجة جاهزة
+        async function generateTripShareImage(d) {
+            const W = 1080, H = 1080;
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+            ctx.direction = 'rtl';
+            ctx.textAlign = 'center';
+
+            try { await document.fonts.load('900 60px Tajawal'); } catch (e) {}
+
+            const themeColor = d.isCap ? '#2563eb' : '#f97316';
+            const themeColorDark = d.isCap ? '#1e3a8a' : '#c2410c';
+
+            const grad = ctx.createLinearGradient(0, 0, W, H);
+            grad.addColorStop(0, themeColorDark);
+            grad.addColorStop(1, themeColor);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // كارت أبيض بحواف دائرية وبوردر أسود، بنفس هوية التطبيق البصرية
+            const cardX = 60, cardY = 150, cardW = W - 120, cardH = 820, radius = 60;
+            ctx.save();
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(cardX, cardY, cardW, cardH, radius);
+            else ctx.rect(cardX, cardY, cardW, cardH);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = '#000000';
+            ctx.stroke();
+            ctx.clip();
+
+            ctx.fillStyle = '#00a884';
+            ctx.font = '900 42px Tajawal, sans-serif';
+            ctx.fillText('🚗 ShareRide', W / 2, cardY + 90);
+
+            const badgeText = d.isCap ? 'كابتن 🚖' : 'مجموعة ركاب 🧑‍🤝‍🧑';
+            ctx.font = '900 34px Tajawal, sans-serif';
+            const badgeW = ctx.measureText(badgeText).width + 70;
+            const badgeX = W / 2 - badgeW / 2, badgeY = cardY + 125, badgeH = 66;
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 33);
+            else ctx.rect(badgeX, badgeY, badgeW, badgeH);
+            ctx.fillStyle = themeColor;
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(badgeText, W / 2, badgeY + 45);
+
+            ctx.fillStyle = '#1e293b';
+            ctx.font = '900 58px Tajawal, sans-serif';
+            wrapCenteredText(ctx, `${d.origin} ⬅️ ${d.destination}`, W / 2, cardY + 310, cardW - 100, 68);
+
+            let ty = cardY + 440;
+            ctx.font = '700 36px Tajawal, sans-serif';
+            ctx.fillStyle = '#475569';
+            if (d.departure_time) { ctx.fillText('🕒 ذهاب: ' + d.departure_time, W / 2, ty); ty += 56; }
+            if (d.return_time) { ctx.fillText('🕒 عودة: ' + d.return_time, W / 2, ty); ty += 56; }
+
+            // الجزء المبلور عمدًا — التفصيلة المغرية اللي بتشجع الدخول للموقع
+            const teaserText = d.isCap
+                ? ('💰 السعر: ' + (d.price_per_seat || 'حسب الاتفاق'))
+                : '👥 تفاصيل الانضمام والمقاعد المتاحة';
+            ctx.save();
+            ctx.filter = 'blur(7px)';
+            ctx.font = '800 38px Tajawal, sans-serif';
+            ctx.fillStyle = '#0f172a';
+            ctx.fillText(teaserText, W / 2, ty + 45);
+            ctx.restore();
+            ctx.font = '900 30px Tajawal, sans-serif';
+            ctx.fillStyle = themeColor;
+            ctx.fillText('🔒 اضغط اللينك تحت لعرض التفاصيل كاملة', W / 2, ty + 105);
+
+            ctx.restore();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, H - 90, W, 90);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 30px Tajawal, sans-serif';
+            ctx.fillText('📲 التفاصيل الكاملة + التواصل من داخل تطبيق ShareRide', W / 2, H - 35);
+
+            return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/png'));
+        }
+
+        // مساعد بسيط بيلف نص طويل على أكتر من سطر لو مش هيكون عريض جدًا على الكارت، متمركز أفقيًا
+        function wrapCenteredText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '', lines = [];
+            words.forEach(w => {
+                const test = line ? line + ' ' + w : w;
+                if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+                else line = test;
+            });
+            if (line) lines.push(line);
+            const startY = y - (lines.length - 1) * lineHeight / 2;
+            lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
+        }
+
+        async function shareTrip(text, tripId, imgData) {
             // بنحط الرحلة نفسها في الرابط (#trip=ID) عشان لما حد يدوس على اللينك يدخل على تفاصيل
             // الرحلة دي بالظبط، مش الصفحة الرئيسية بس. بيتقرا تلقائيًا في window.onload تحت.
             const url = location.origin + location.pathname + '#trip=' + encodeURIComponent(tripId);
             shareCtx = { text, url };
+
+            // 🆕 لو المتصفح بيدعم مشاركة ملفات، نحاول نولّد صورة تشويقية ونشاركها كصورة فعلية
+            // (مش بس لينك)؛ أي فشل في التوليد أو المشاركة بيرجعنا تلقائيًا للسلوك النصي القديم تحت
+            if (imgData && navigator.share && navigator.canShare) {
+                try {
+                    const blob = await generateTripShareImage(imgData);
+                    const file = new File([blob], 'shareride-trip.png', { type: 'image/png' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], text: text + '\n' + url });
+                        return;
+                    }
+                } catch (e) { /* هنكمل على الـ fallback تحت من غير ما نوقف المستخدم بأي خطأ */ }
+            }
+
             // أولوية لمشاركة النظام (Web Share API) — بتظهر واتساب وماسنجر وفيسبوك وأي تطبيق تاني
             // مثبت عند المستخدم نفسه، من غير ما نحتاج نبني رابط مخصص لكل منصة
             if (navigator.share) {
@@ -1431,7 +1545,7 @@
                 + `${isCap && t.price_per_seat ? '💰 السعر: ' + t.price_per_seat + '\n' : ''}`
                 + `📲 شوف التفاصيل وتواصل عبر تطبيق ShareRide:`;
 
-            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${escapeHtml(t.origin)} ⬅️ ${escapeHtml(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><button onclick='shareTrip(${JSON.stringify(shareText)}, ${JSON.stringify(t.id)})' class="share-btn" aria-label="مشاركة الرحلة"><svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M14 8V4l8 7-8 7v-4.05c-5.05.28-8.02 2-10 5.05.4-6.5 3.7-11.3 10-12z"/></svg></button><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://wa.me/2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${escapeHtml(t.mgmt_code) || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}${mode === 'my' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 الرحلة دي مسجلة برقم: ${escapeHtml(displayPhone)}</p>` : ''}</div><div>${btnUI}</div></div>`;
+            return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${escapeHtml(t.origin)} ⬅️ ${escapeHtml(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><button onclick='shareTrip(${JSON.stringify(shareText)}, ${JSON.stringify(t.id)}, ${JSON.stringify({ origin: t.origin, destination: t.destination, isCap, departure_time: hasDep ? t.departure_time : null, return_time: hasRet ? t.return_time : null, price_per_seat: t.price_per_seat })})' class="share-btn" aria-label="مشاركة الرحلة"><svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M14 8V4l8 7-8 7v-4.05c-5.05.28-8.02 2-10 5.05.4-6.5 3.7-11.3 10-12z"/></svg></button><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://wa.me/2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${escapeHtml(t.mgmt_code) || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}${mode === 'my' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 الرحلة دي مسجلة برقم: ${escapeHtml(displayPhone)}</p>` : ''}</div><div>${btnUI}</div></div>`;
         }
 
         // بيفتح مودال فيه كارت رحلة واحدة بس (من غير أي كروت تانية حواليها)
