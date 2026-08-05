@@ -1,7 +1,7 @@
 {
   "name": "Sharride",
   "short_name": "Sharride",
-  "description": "منصة تنسيق المشاوير اليومية والشهرية بين الكباتن والركاب",
+  "description": "شوف رحلات في سكتك أو ضيف رحلتك",
   "id": "/",
   "start_url": "/",
   "scope": "/",
