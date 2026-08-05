@@ -3,15 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sharride App</title>
-
-    <!-- Open Graph Meta Tags (بريفيو لينك واتساب/فيسبوك) -->
-    <meta property="og:title" content="Sharride - شارك رحلتك">
-    <meta property="og:description" content="اطلب أو انشر رحلتك بسهولة وأمان مع Sharride">
-    <meta property="og:image" content="https://abdelrahmanalaaegy.github.io/sharedcar/preview.png">
-    <meta property="og:url" content="https://abdelrahmanalaaegy.github.io/sharedcar/">
-    <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary_large_image">
+    <title>ShareRide App</title>
 
     <!-- PWA & Mobile Optimization -->
     <link rel="manifest" href="manifest.json">
@@ -136,7 +128,7 @@
 
     <!-- شاشة التحميل -->
     <div id="loading-overlay">
-        <h1 class="text-4xl font-black text-[#00a884] mb-2 italic">Sharride</h1>
+        <h1 class="text-4xl font-black text-[#00a884] mb-2 italic">ShareRide</h1>
         <p class="text-gray-400 font-bold pulse">جاري تشغيل المحرك... 🚗</p>
     </div>
 
@@ -406,7 +398,7 @@
                     </div>
                     <div>
                         <h3 class="font-black text-sm">FOFi</h3>
-                        <p class="text-[10px] opacity-80 font-bold">مساعدك في Sharride 💬</p>
+                        <p class="text-[10px] opacity-80 font-bold">مساعدك في ShareRide 💬</p>
                     </div>
                 </div>
                 <button onclick="closeFofi()" class="text-white/80 text-2xl leading-none px-1">×</button>
@@ -670,7 +662,7 @@
             el.style.display = '';
             el.innerHTML = `
                 <h2 class="text-base font-black text-slate-800 mb-2 text-center">سجّل رقمك دلوقتي 📱</h2>
-                <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">من غير تسجيل دخول ولا باسورد. كده لو جيت تسجل مشوارك أو تنضم لرحلة هتلاقي رقمك جاهز من غير ما تكتبه تاني.</p>
+                <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">جاهز لمشوارك الجاي؟ ضيف رقمك 👋</p>
                 <div class="flex gap-2">
                     <input type="tel" id="home-phone-input" placeholder="01xxxxxxxxx" class="form-input text-center font-black flex-1 min-w-0">
                     <button onclick="saveHomePhone()" class="bg-[#00a884] text-white font-black rounded-2xl px-6 py-[15px] text-sm shadow-md shrink-0" style="width:auto;">حفظ</button>
@@ -1249,7 +1241,7 @@
 
                 saveJoinedTrip(tripId, newP);
 
-                let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر Sharride، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر Sharride، يلا ننسق مع بعض.`;
+                let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر ShareRide، ياريت تأكد ميعاد التحرك.` : `سلام عليكم، أنا شوفت طلبك لرحلة ${origin} وانضميت ليك في المجموعة عبر ShareRide، يلا ننسق مع بعض.`;
 
                 // بدل ما نعرض مودال نجاح منفصل وبعدين شيت واتساب تاني بنفس المعنى، بنروح على طول
                 // لشيت واتساب (الرقم بيتجاب وقت الضغط فقط عبر RPC آمنة، مش متسرّب في الـ DOM)
@@ -1362,7 +1354,7 @@
 
             ctx.fillStyle = '#00a884';
             ctx.font = '900 42px Tajawal, sans-serif';
-            ctx.fillText('🚗 Sharride', W / 2, cardY + 90);
+            ctx.fillText('🚗 ShareRide', W / 2, cardY + 90);
 
             const badgeText = d.isCap ? 'كابتن 🚖' : 'مجموعة ركاب 🧑‍🤝‍🧑';
             ctx.font = '900 34px Tajawal, sans-serif';
@@ -1406,7 +1398,7 @@
             ctx.fillRect(0, H - 90, W, 90);
             ctx.fillStyle = '#ffffff';
             ctx.font = '900 30px Tajawal, sans-serif';
-            ctx.fillText('📲 التفاصيل الكاملة + التواصل من داخل تطبيق Sharride', W / 2, H - 35);
+            ctx.fillText('📲 التفاصيل الكاملة + التواصل من داخل تطبيق ShareRide', W / 2, H - 35);
 
             return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/png'));
         }
@@ -1522,8 +1514,8 @@
                 // الرقم بقى مبيوصلش للـ HTML خالص في وضع public؛ التواصل بيتم بضغطة زرار عبر openWhatsApp
                 // اللي بيجيب الرقم لحظيًا من RPC آمنة (get_trip_contact) بدل ما يكون مطبوع في الصفحة أو الـ DOM
                 // بنستخدم JSON.stringify عشان نبني الـ arguments بأمان (يمنع أي كسر لكود الـ onclick)
-                const inquiryMsg = 'سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' عبر Sharride وعاوز أستفسر عن حاجة.';
-                const offerMsg = 'سلام عليكم، شفت رحلتك من ' + t.origin + ' عبر Sharride وحابب أتواصل معاك بخصوصها.';
+                const inquiryMsg = 'سلام عليكم يا كابتن، شفت رحلتك من ' + t.origin + ' عبر ShareRide وعاوز أستفسر عن حاجة.';
+                const offerMsg = 'سلام عليكم، شفت رحلتك من ' + t.origin + ' عبر ShareRide وحابب أتواصل معاك بخصوصها.';
                 if (isCap) {
                     const inquiryLink = `<button onclick='openWhatsApp(${JSON.stringify(t.id)}, ${JSON.stringify(inquiryMsg)})' class="btn-outline flex-1">استفسار 💬</button>`;
                     const actionBtn = alreadyJoined ? leaveBtnCaptain : `<button onclick='joinAction(${JSON.stringify(t.id)}, ${JSON.stringify(t.origin)}, ${JSON.stringify(t.destination)}, "captain")' class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button>`;
@@ -1545,7 +1537,7 @@
                 + `${hasDep ? '🕒 ذهاب: ' + t.departure_time + '\n' : ''}`
                 + `${hasRet ? '🕒 عودة: ' + t.return_time + '\n' : ''}`
                 + `${isCap && t.price_per_seat ? '💰 السعر: ' + t.price_per_seat + '\n' : ''}`
-                + `📲 شوف التفاصيل وتواصل عبر تطبيق Sharride:`;
+                + `📲 شوف التفاصيل وتواصل عبر تطبيق ShareRide:`;
 
             return `<div class="trip-card">${selectCb}<div class="${fadeClass}">${deletedBadge}<div class="card-header"><div class="main-info"><h3 class="font-black text-[15px] text-slate-800 mb-1 truncate">${escapeHtml(t.origin)} ⬅️ ${escapeHtml(t.destination)}</h3><span class="inline-block ${tripTypeClass} text-[9px] font-black px-2 py-1 rounded-lg mb-2">${tripType}</span><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${(t.departure_time && t.departure_time!=='null')?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${(t.return_time && t.return_time!=='null')?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1} ركاب</span>`}</div></div><div class="side-info"><button onclick='shareTrip(${JSON.stringify(shareText)}, ${JSON.stringify(t.id)}, ${JSON.stringify({ origin: t.origin, destination: t.destination, isCap, departure_time: hasDep ? t.departure_time : null, return_time: hasRet ? t.return_time : null, price_per_seat: t.price_per_seat })})' class="share-btn" aria-label="مشاركة الرحلة"><svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M14 8V4l8 7-8 7v-4.05c-5.05.28-8.02 2-10 5.05.4-6.5 3.7-11.3 10-12z"/></svg></button><span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'حسب الاتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''} ${passengers.length > 0 && mode !== 'public' ? `<div class="joined-list"><p class="text-[10px] font-black text-green-700 mb-2 text-right">🤝 منضمين ليك (${passengers.length}):</p><div class="flex flex-wrap gap-2">${passengers.map(p => `<div class="bg-white border border-green-200 px-2 py-1 rounded-lg text-[9px] font-bold text-green-600 shadow-sm flex items-center gap-2"><a href="https://wa.me/2${p}" target="_blank" class="underline font-black text-[9px]">كلم ${p}</a> <button onclick="removeJoiner('${t.id}', '${p}', '${mode}')" class="text-red-500 font-bold">✕</button></div>`).join('')}</div></div>` : ''} ${mode === 'admin' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 رقم الناشر: ${displayPhone}</p><div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-2"><p class="text-[11px] font-black text-amber-700">🔑 كود الإدارة: ${escapeHtml(t.mgmt_code) || '—'}</p>${t.mgmt_code ? `<button onclick="copyMgmtCode('${t.mgmt_code}')" class="bg-amber-600 text-white text-[9px] font-black px-2 py-1 rounded-lg">نسخ</button>` : ''}</div>` : ''}${mode === 'my' ? `<p class="text-[11px] font-black text-blue-600 italic bg-blue-50 p-2 rounded-xl border border-blue-100 text-center mt-2">📱 الرحلة دي مسجلة برقم: ${escapeHtml(displayPhone)}</p>` : ''}</div><div>${btnUI}</div></div>`;
         }
@@ -1802,7 +1794,7 @@
             const panel = document.getElementById('fofi-panel');
             panel.classList.add('open');
             document.getElementById('fofi-body').innerHTML = '';
-            fofiAddBot('أهلًا بيك! 👋 أنا <b>FOFi</b>، مساعدك في Sharride. تحب تسألني في إيه؟');
+            fofiAddBot('أهلًا بيك! 👋 أنا <b>FOFi</b>، مساعدك في ShareRide. تحب تسألني في إيه؟');
             if (topic && FOFI_KB[topic]) {
                 fofiGo(topic);
             } else {
