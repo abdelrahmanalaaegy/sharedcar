@@ -2,9 +2,9 @@
   "name": "Sharride",
   "short_name": "Sharride",
   "description": "شوف رحلات في سكتك أو ضيف رحلتك",
-  "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "id": "/sharedcar/",
+  "start_url": "/sharedcar/",
+  "scope": "/sharedcar/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f8fafc",
@@ -13,13 +13,13 @@
   "lang": "ar",
   "icons": [
     {
-      "src": "logo-192.png",
+      "src": "/sharedcar/logo-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "logo.png",
+      "src": "/sharedcar/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
