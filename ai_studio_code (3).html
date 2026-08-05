@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sharride App</title>
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Sharride - شارك رحلتك">
+    <meta property="og:description" content="اطلب أو انشر رحلتك بسهولة وأمان مع Sharride">
+    <meta property="og:image" content="https://abdelrahmanalaaegy.github.io/sharedcar/preview.png">
+    <meta property="og:url" content="https://abdelrahmanalaaegy.github.io/sharedcar/">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- PWA & Mobile Optimization -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00a884">
+    <link rel="apple-touch-icon" href="logo.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; padding-bottom: 95px; -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .nav-btn.active { color: #00a884; font-weight: 900; }
+        .nav-btn.active::after { content: ''; display: block; width: 15px; height: 4px; background: #00a884; margin: 2px auto; border-radius: 10px; }
+
+        .form-input { width: 100%; padding: 15px; border-radius: 20px; border: 1px solid #e2e8f0; outline: none; background: white; font-size: 14px; font-weight: 700; text-align: center; transition: 0.3s; }
+        .form-input:focus { border-color: #00a884; box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.1); }
+        
+        .trip-card { background: white; border-radius: 30px; padding: 20px; margin-bottom: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 10px; position: relative; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .main-info { flex: 1; min-width: 0; }
+        .side-info { display: flex; flex-direction: column; align-items: center; min-width: 75px; text-align: center; }
+        
+        .role-badge { padding: 5px 12px; border-radius: 10px; font-size: 9px; font-weight: 900; color: white; width: 100%; }
+        .price-text { font-size: 11px; font-weight: 900; color: #00a884; margin-top: 8px; line-height: 1.2; }
+        
+        .btn-green { background: #00a884; color: white; border-radius: 22px; font-weight: 800; width: 100%; padding: 16px; transition: 0.2s; text-align: center; cursor: pointer; border:none; box-shadow: 0 8px 15px rgba(0,168,132,0.2); }
+        .btn-green:active { transform: scale(0.96); }
+        .btn-blue { background: #2563eb; color: white; border-radius: 20px; font-weight: 800; width: 100%; padding: 16px; box-shadow: 0 8px 15px rgba(37, 99, 235, 0.2); }
+        .btn-outline { border: 2.5px solid #00a884; color: #00a884; border-radius: 20px; font-weight: 800; width: 100%; padding: 14px; font-size: 12px; text-align: center; }
+        
+        .feature-badge { background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 10px; font-size: 10px; font-weight: 900; }
+        .match-badge { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: 900; border: 1px solid #bbf7d0; }
+        .content-fade { opacity: 0.4; filter: grayscale(1); }
+        .route-header { background: #cbd5e1; color: #1e293b; padding: 10px 20px; border-radius: 18px; font-size: 12px; font-weight: 900; margin: 25px 0 15px 0; display: block; text-align: center; border: 1px solid #cbd5e1; }
+
+        #search-filter-bar { position: sticky; top: var(--header-h, 76px); z-index: 90; }
+
+        #scroll-top-btn { position: fixed; bottom: 90px; right: 18px; width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,168,132,0.35); border: none; z-index: 200; opacity: 0; transform: translateY(15px) scale(0.8); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
+        #scroll-top-btn.show { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        #scroll-top-btn:active { transform: scale(0.9); }
+        
+        #loading-overlay { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .pulse { animation: pulse-anim 1.5s infinite; }
+        @keyframes pulse-anim { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; } }
+        
+        #global-edit-form { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(5px); }
+        .edit-modal { background: #fffdf5; border: 3px solid #f59e0b; padding: 25px; border-radius: 40px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; text-align: right; }
+
+        .time-select-group { display: flex; gap: 4px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #cbd5e1; }
+        .time-select-group select { background: transparent; outline: none; font-weight: bold; font-size: 14px; flex: 1; min-width: 0; text-align: center; border:none; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+
+        .share-btn { width: 30px; height: 30px; border-radius: 50%; background: #9f1239; color: white; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; margin-bottom: 6px; transition: 0.2s; flex-shrink: 0; box-shadow: 0 4px 10px rgba(159,18,57,0.35); }
+        .share-btn svg { width: 15px; height: 15px; }
+        .share-btn:active { transform: scale(0.9); background: #e2e8f0; }
+
+        #share-sheet { position: fixed; inset: 0; z-index: 750; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #share-sheet.open { display: flex; }
+
+        #wa-confirm-sheet { position: fixed; inset: 0; z-index: 750; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #wa-confirm-sheet.open { display: flex; }
+        .share-sheet-inner { background: #f8fafc; width: 100%; max-width: 420px; border-radius: 30px 30px 0 0; padding: 22px 18px 26px; animation: fofiUp 0.3s ease; }
+        .share-options-row { display: flex; justify-content: space-around; margin-top: 18px; }
+        .share-opt { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; }
+        .share-opt:active { transform: scale(0.93); }
+        .share-opt-icon { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; box-shadow: 0 8px 18px rgba(0,0,0,0.15); }
+        .share-opt span { font-size: 10px; font-weight: 900; color: #334155; }
+
+        .stat-box { background: #0b141a; color: white; padding: 15px; border-radius: 24px; text-align: center; border-bottom: 4px solid #00a884; }
+        .stat-red { background: #7f1d1d !important; border-bottom: 4px solid #ef4444 !important; }
+        .joined-list { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 15px; margin-top: 10px; }
+
+        #notif-toast { position: fixed; top: 14px; left: 50%; z-index: 800; width: calc(100% - 28px); max-width: 400px; transform: translate(-50%, -120%); opacity: 0; pointer-events: none; transition: transform 0.3s ease, opacity 0.3s ease; }
+        #notif-toast.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+        #notif-toast button { width: 100%; text-align: right; background: #0b3d36; color: white; border: none; border-radius: 20px; padding: 14px 18px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); cursor: pointer; }
+        #notif-toast .notif-toast-text { flex: 1; }
+        #notif-toast .notif-toast-title { font-weight: 900; font-size: 12.5px; }
+        #notif-toast .notif-toast-sub { font-weight: 700; font-size: 10.5px; opacity: 0.75; margin-top: 2px; }
+
+        .no-results-card { background: white; border: 1px solid #f1f5f9; border-radius: 30px; padding: 40px 24px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        .pulse-loading { animation: pulse-cta-anim 2.2s ease-in-out infinite; }
+        @keyframes pulse-cta-anim { 0%, 100% { box-shadow: 0 8px 15px rgba(0,168,132,0.2); } 50% { box-shadow: 0 8px 22px rgba(0,168,132,0.45); } }
+
+        #fofi-fab { position: fixed; bottom: 20px; right: 18px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #00a884, #0b3d36); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,168,132,0.45); border: none; z-index: 250; cursor: pointer; transition: transform 0.2s ease; }
+        .fofi-avatar { display: inline-block; line-height: 0; }
+        #fofi-fab:active { transform: scale(0.92); }
+        #fofi-fab .fofi-fab-tag { position: absolute; bottom: -7px; font-size: 8px; font-weight: 900; background: #0b141a; color: white; padding: 1.5px 7px; border-radius: 8px; letter-spacing: 0.3px; }
+        #fofi-fab .fofi-fab-dot { position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: #f97316; border: 2px solid white; border-radius: 50%; }
+
+        #fofi-panel { position: fixed; inset: 0; z-index: 700; background: rgba(11,20,26,0.55); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+        #fofi-panel.open { display: flex; }
+        .fofi-sheet { background: #f8fafc; width: 100%; max-width: 440px; height: 82vh; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -15px 40px rgba(0,0,0,0.25); animation: fofiUp 0.3s ease; }
+        @keyframes fofiUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .fofi-header { background: linear-gradient(135deg, #0b3d36, #00a884); color: white; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .fofi-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .fofi-bubble-bot { background: white; border: 1px solid #e2e8f0; border-radius: 18px 18px 18px 4px; padding: 13px 15px; font-size: 12.5px; font-weight: 700; color: #334155; line-height: 1.8; align-self: flex-start; max-width: 90%; text-align: right; }
+        .fofi-chip-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+        .fofi-chip { background: white; border: 1.5px solid #00a884; color: #00a884; font-weight: 900; font-size: 11.5px; padding: 9px 14px; border-radius: 16px; cursor: pointer; }
+        .fofi-chip:active { transform: scale(0.95); }
+        .fofi-chip-orange { border-color: #f97316; color: #f97316; }
+        .fofi-wa-btn { background: #25D366; color: white; font-weight: 900; font-size: 13px; padding: 15px; border-radius: 18px; text-align: center; display: block; text-decoration: none; box-shadow: 0 8px 18px rgba(37,211,102,0.35); align-self: stretch; }
+
+        /* Route Builder UI Styles */
+        .route-point-item { display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 8px 12px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 6px; }
+        .route-point-item select { flex: 1; background: transparent; border: none; font-weight: 800; font-size: 12px; outline: none; }
+    </style>
+</head>
+<body>
+
+    <!-- شاشة التحميل -->
+    <div id="loading-overlay">
+        <h1 class="text-4xl font-black text-[#00a884] mb-2 italic">Sharride</h1>
+        <p class="text-gray-400 font-bold pulse">جاري تشغيل المحرك... 🚗</p>
+    </div>
+
+    <!-- Navigation -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-[100] p-4 text-center border-b border-slate-100 rounded-b-[30px] shadow-sm">
+        <div class="flex justify-around items-center max-w-md mx-auto">
+            <button onclick="uiTab('home')" id="nav-home" class="nav-btn active flex flex-col items-center gap-1">
+                <span class="text-lg">🏠</span><span class="text-[9px]">الرئيسية</span>
+            </button>
+            <button onclick="uiTab('search')" id="nav-search" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">🔍</span><span class="text-[9px]">استكشاف</span>
+            </button>
+            <button onclick="uiTab('post')" id="nav-post" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">➕</span><span class="text-[9px]">سجل مشوارك</span>
+            </button>
+            <button onclick="uiTab('my')" id="nav-my" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">👤 رحلاتي</span>
+            </button>
+            <button onclick="openNotifications()" id="nav-notif" class="relative text-slate-400 flex flex-col items-center gap-1">
+                <span class="text-lg">🔔</span><span class="text-[9px]">إشعارات</span>
+                <span id="notif-badge" class="hidden absolute -top-1 left-2 bg-red-600 text-white text-[9px] font-black rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">0</span>
+            </button>
+            <button onclick="uiTab('admin')" id="nav-admin" class="nav-btn text-slate-400 flex flex-col items-center gap-1" style="display:none;">
+                <span class="text-lg">⚙️</span><span class="text-[9px]">الإدارة</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 min-h-screen">
+
+        <!-- 1. الصفحة الرئيسية -->
+        <div id="view-home" class="tab-content active py-2">
+            <div class="py-8 px-6 bg-gradient-to-br from-[#00a884] to-[#128c7e] rounded-[2.5rem] text-white shadow-xl text-right">
+                <h1 class="text-2xl font-black mb-2 leading-snug tracking-tight">يمكن المشوار اللي بتدور عليه موجود هنا 🚗</h1>
+                <p class="text-[13px] font-bold opacity-90 leading-relaxed">رحلات متكررة للشغل والدراسة والمشاوير اليومية، في مكان واحد واضح ومنظم.</p>
+                <div class="flex items-center gap-2 mt-5 text-[11px] font-bold opacity-80">
+                    <span>👇 اختار اللي يناسبك تحت</span>
+                </div>
+            </div>
+
+            <div id="home-phone-card" class="mt-6 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm text-right"></div>
+
+            <div class="mt-6 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm text-right">
+                <h2 class="text-base font-black text-slate-800 mb-4 text-center">إنت عايز إيه دلوقتي؟</h2>
+                <div class="bg-slate-100 p-1 rounded-2xl flex gap-1 mb-4">
+                    <button onclick="homeRoleSelect('captain')" id="home-role-cap" class="flex-1 py-3 rounded-xl font-black text-[12px] transition">🚗 عندي عربية</button>
+                    <button onclick="homeRoleSelect('passenger')" id="home-role-pas" class="flex-1 py-3 rounded-xl font-black text-[12px] transition">🙋‍♂️ بدور على مشوار</button>
+                </div>
+                <div id="home-role-desc"></div>
+            </div>
+
+            <div class="mt-7 text-right">
+                <h2 class="text-base font-black text-slate-800 mb-4 text-center">ابدأ ببساطة في 3 خطوات</h2>
+                <div class="space-y-3">
+                    <div class="bg-white p-4 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center gap-3">
+                        <div class="w-9 h-9 shrink-0 rounded-full bg-[#00a884]/10 text-[#00a884] font-black flex items-center justify-center text-sm">1</div>
+                        <div class="min-w-0">
+                            <h4 class="font-black text-xs text-slate-800">حدد مشوارك وقاطعت الطريق</h4>
+                            <p class="text-[11px] text-slate-500 font-bold mt-0.5">اختار مكان البداية والوجهة والنقاط الوسيطة.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center gap-3">
+                        <div class="w-9 h-9 shrink-0 rounded-full bg-[#00a884]/10 text-[#00a884] font-black flex items-center justify-center text-sm">2</div>
+                        <div class="min-w-0">
+                            <h4 class="font-black text-xs text-slate-800">استكشف أو انشر</h4>
+                            <p class="text-[11px] text-slate-500 font-bold mt-0.5">اعرض خط سيرك أو ابحث عن رحلة متوافقة مع مسارك.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center gap-3">
+                        <div class="w-9 h-9 shrink-0 rounded-full bg-[#00a884]/10 text-[#00a884] font-black flex items-center justify-center text-sm">3</div>
+                        <div class="min-w-0">
+                            <h4 class="font-black text-xs text-slate-800">تواصل واتفق</h4>
+                            <p class="text-[11px] text-slate-500 font-bold mt-0.5">تواصل مباشرة ونسّق مواعيد التحرك.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-7 text-right bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h2 class="text-base font-black text-slate-800 mb-2 text-center">مشوار يومي، أسبوعي أو شهري 🔄</h2>
+                <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">سواء مشوارك بيتكرر كل يوم أو في أيام محددة، تقدر تسجل تفاصيله وتبحث عن رحلات مشابهة.</p>
+                <div class="flex justify-center gap-2 flex-wrap">
+                    <span class="feature-badge">يومي</span>
+                    <span class="feature-badge">أسبوعي</span>
+                    <span class="feature-badge">شهري</span>
+                </div>
+            </div>
+
+            <div class="mt-7 mb-2 text-center">
+                <p class="text-[11px] text-slate-400 font-bold mb-2">لسه مش عارف تبدأ منين؟</p>
+                <button onclick="openFofi()" class="text-[12px] font-black text-[#00a884] underline underline-offset-2">اسأل مساعد FOFi 💬</button>
+            </div>
+        </div>
+
+        <!-- 2. البحث -->
+        <div id="view-search" class="tab-content text-center">
+            <div id="search-filter-bar" class="bg-white p-5 rounded-[2.2rem] mb-6 border shadow-sm">
+                <div class="bg-gray-100 p-1 rounded-xl flex gap-1 mb-3">
+                    <button onclick="uiSearchSwitch('captain')" id="search-role-cap" class="flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm">🚗 رحلات الكباتن</button>
+                    <button onclick="uiSearchSwitch('passenger')" id="search-role-pas" class="flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500">🙋‍♂️ رحلات الركاب</button>
+                </div>
+                <input type="hidden" id="f-user-identity" value="captain">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="f-o" onchange="apiGetTrips()" class="form-input text-xs"></select>
+                    <select id="f-d" onchange="apiGetTrips()" class="form-input text-xs"></select>
+                </div>
+                <div class="flex items-center justify-between mt-2 px-1">
+                    <label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
+                        <input type="checkbox" id="f-expanded" onchange="apiGetTrips()" class="accent-[#00a884]">
+                        <span>عرض كافة المناطق (توسيع البحث)</span>
+                    </label>
+                    <p id="top-guide-banner" class="text-[10px] text-gray-400 font-bold italic">ملقيتش؟ سجل مشوارك!</p>
+                </div>
+            </div>
+            <div id="list-public"></div>
+        </div>
+
+        <!-- 3. النشر (مع Route Builder) -->
+        <div id="view-post" class="tab-content">
+            <div class="bg-white p-5 rounded-[2.2rem] border shadow-sm">
+                <form id="postForm" onsubmit="apiPost(event)" class="space-y-4 text-right">
+                    <h2 class="text-center font-black text-[#00a884] text-lg italic pr-2">سجل مشوارك 📝</h2>
+                    <div class="flex bg-gray-100 p-1 rounded-xl">
+                        <button type="button" id="role-cap" onclick="uiRole('captain')" class="flex-1 py-3 rounded-lg font-bold text-xs bg-white text-[#00a884] shadow-sm">أنا كابتن 🚗</button>
+                        <button type="button" id="role-pas" onclick="uiRole('passenger')" class="flex-1 py-3 rounded-lg font-bold text-xs text-gray-500">أنا راكب 🙋‍♂️</button>
+                    </div>
+                    <input type="hidden" id="in-role" value="captain">
+                    
+                    <!-- Route Points Section -->
+                    <div class="space-y-2 border-b pb-4">
+                        <label class="block text-xs font-black text-slate-700">📍 نقاط خط السير (الترتيب مهم):</label>
+                        <div class="grid grid-cols-2 gap-2 font-bold text-xs">
+                            <select id="in-o" required onchange="updateRoutePointsPreview()" class="form-input border-emerald-500/20"></select>
+                            <select id="in-d" required onchange="updateRoutePointsPreview()" class="form-input border-emerald-500/20"></select>
+                        </div>
+                        <div id="via-points-container" class="space-y-2 mt-2"></div>
+                        <button type="button" onclick="addViaPoint()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition">➕ إضافة نقطة وسيطة في الطريق</button>
+                    </div>
+
+                    <div class="space-y-4 pt-2">
+                        <div class="time-select-group"><select id="in-h1"><option value="">بدون ذهاب</option></select><span>:</span><select id="in-m1"></select><select id="in-p1"><option>صباحاً</option><option>مساءً</option></select></div>
+                        <div class="time-select-group"><select id="in-h2"><option value="">بدون عودة</option></select><span>:</span><select id="in-m2"></select><select id="in-p2"><option>مساءً</option><option>صباحاً</option></select></div>
+                        <p class="text-[10px] text-gray-400 font-bold text-center leading-relaxed">🔔 اختار ذهاب أو عودة أو الاتنين حسب مشوارك.</p>
+                    </div>
+
+                    <div id="cap-box" class="space-y-4 border-t pt-4">
+                        <div class="grid grid-cols-2 gap-3 font-bold text-xs"><select id="in-seats" class="form-input"><option value="1">1 مقعد متاح</option><option value="2">2 مقعد متاح</option><option value="3">3 مقاعد متاحة</option><option value="4">4 مقاعد متاحة</option></select><input type="number" id="in-price" placeholder="السعر لليوم" class="form-input text-center"></div>
+                        <select id="in-ac" class="form-input text-xs font-black"><option value="true">✅ السيارة مكيفة</option><option value="false">❌ بدون تكييف</option></select>
+                    </div>
+                    <textarea id="in-notes" placeholder="ملاحظات إضافية (الشنط، المواعيد...)" class="form-input h-20 mb-3 font-bold text-right resize-none"></textarea>
+                    <button type="submit" id="btn-pub" class="btn-green p-4 text-xl font-black italic shadow-lg">نشر المشوار الآن 🚀</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 4. رحلاتي -->
+        <div id="view-my" class="tab-content text-center">
+            <div class="bg-white p-7 rounded-[2.5rem] border-2 border-black mb-6 shadow-sm">
+                <h2 class="font-black mb-3 italic text-xl">إدارة رحلاتي 👤</h2>
+                <p class="text-[11px] text-gray-400 font-bold leading-relaxed">رحلاتك من الجهاز ده بس 📱</p>
+                <button onclick="linkTripByCodeOnly()" class="w-full mt-4 bg-orange-500 text-white py-3 rounded-2xl font-black text-[13px] shadow-md">🔑 عندي كود إدارة رحلة قديمة</button>
+            </div>
+            <div id="my-phone-card"></div>
+            <div id="list-mine"></div>
+        </div>
+
+        <!-- 5. الإدارة -->
+        <div id="view-admin" class="tab-content text-center">
+            <div id="admin-auth" class="bg-white p-8 rounded-3xl border shadow-sm space-y-3">
+                <input type="email" id="admin-email" placeholder="الإيميل" autocomplete="username" class="form-input text-center border-2">
+                <input type="password" id="admin-pass" placeholder="كلمة المرور" autocomplete="current-password" class="form-input text-center border-2">
+                <button onclick="apiAdminLogin()" class="w-full bg-black text-white p-4 rounded-2xl font-black">دخول المدير</button>
+            </div>
+            <div id="admin-panel" class="hidden">
+                <button onclick="adminLogout()" class="w-full bg-gray-200 text-gray-600 p-3 rounded-2xl font-black text-xs mb-4">🚪 خروج من حساب الأدمن</button>
+                <div class="grid grid-cols-1 gap-3 mb-6 text-center">
+                    <div class="stat-box"><p class="text-[10px] opacity-70 font-black text-white">الزيارات</p><h2 id="visit-total" class="text-3xl font-black text-[#00a884]">0</h2></div>
+                    <div class="grid grid-cols-2 gap-3"><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">كباتن</p><h2 id="count-cap" class="text-xl text-white font-black">0</h2></div><div class="stat-box stat-red"><p class="text-[10px] opacity-80 text-white font-bold">ركاب</p><h2 id="count-pas" class="text-xl text-white font-black">0</h2></div></div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border mb-4 shadow-sm text-right">
+                    <input type="tel" id="admin-search-phone" oninput="apiAdminReload()" placeholder="بحث برقم الهاتف..." class="form-input font-bold">
+                    <select id="admin-search-origin" onchange="apiAdminReload()" class="form-input font-bold text-xs mt-2"></select>
+                    <select id="admin-search-status" onchange="apiAdminReload()" class="form-input font-bold text-xs mt-2">
+                        <option value="">كل الحالات</option>
+                        <option value="active">🟢 نشطة</option>
+                        <option value="completed">✅ مكتملة</option>
+                        <option value="deleted">🗑️ محذوفة</option>
+                        <option value="archived">⚫ حذف نهائي من المستخدم</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 block mb-1 text-right">من تاريخ</label>
+                            <input type="date" id="admin-search-date-from" onchange="apiAdminReload()" class="form-input font-bold text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 block mb-1 text-right">لحد تاريخ</label>
+                            <input type="date" id="admin-search-date-to" onchange="apiAdminReload()" class="form-input font-bold text-xs">
+                        </div>
+                    </div>
+                    <button onclick="adminClearFilters()" class="w-full mt-2 bg-gray-100 text-gray-500 p-2 rounded-xl text-[10px] font-black">✖️ مسح كل الفلاتر</button>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border mb-3 shadow-sm flex items-center justify-between gap-2">
+                    <label class="flex items-center gap-2 text-[11px] font-black text-gray-600"><input type="checkbox" id="admin-select-all" onchange="toggleSelectAll(this)" class="w-4 h-4 accent-[#00a884]"> تحديد الكل</label>
+                    <div id="bulk-actions-bar" class="gap-1" style="display:none;">
+                        <button onclick="bulkAction('active')" class="bg-green-600 text-white px-2 py-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>
+                        <button onclick="bulkAction('done')" class="bg-black text-white px-2 py-2 rounded-xl text-[9px] font-black">✅ إكمال</button>
+                        <button onclick="bulkAction('delperm')" class="bg-red-600 text-white px-2 py-2 rounded-xl text-[9px] font-black">🗑️ حذف نهائي</button>
+                    </div>
+                </div>
+                <div id="list-admin"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Notif Toast -->
+    <div id="notif-toast">
+        <button onclick="openNotifFromToast()">
+            <span class="text-lg">🔔</span>
+            <span class="notif-toast-text">
+                <span class="notif-toast-title block">عندك تحديث جديد</span>
+                <span class="notif-toast-sub block">دوس هنا تشوف الإشعارات</span>
+            </span>
+        </button>
+    </div>
+
+    <!-- Top Scroll Button -->
+    <button id="scroll-top-btn" onclick="scrollToTop()" aria-label="الرجوع لفوق">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+    </button>
+
+    <!-- FOFi FAB -->
+    <button id="fofi-fab" onclick="openFofi()" aria-label="مساعد FOFi">
+        <span class="fofi-fab-dot"></span>
+        <span class="fofi-avatar" style="width:34px;height:34px;">
+            <svg viewBox="0 0 64 64" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M18 26c-1-11 7-19 14-19s15 8 14 19c-2-6-7-9-14-9s-12 3-14 9z" fill="#1a120b"/>
+                <circle cx="32" cy="28" r="13" fill="#eab98a"/>
+                <circle cx="27" cy="27" r="1.4" fill="#1a120b"/>
+                <circle cx="37" cy="27" r="1.4" fill="#1a120b"/>
+                <path d="M26 33c2 2.5 10 2.5 12 0" stroke="#7a4526" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+                <rect x="27" y="38" width="10" height="7" rx="3" fill="#eab98a"/>
+                <path d="M10 64c1-13 10-20 22-20s21 7 22 20z" fill="#1f2937"/>
+                <path d="M27 44l5 9 5-9-5 4z" fill="#f8fafc"/>
+                <path d="M32 44l-9 20-4-7 6-15z" fill="#111827"/>
+                <path d="M32 44l9 20 4-7-6-15z" fill="#111827"/>
+                <circle cx="43" cy="52" r="1.6" fill="#00a884"/>
+            </svg>
+        </span>
+        <span class="fofi-fab-tag">FOFi</span>
+    </button>
+
+    <!-- FOFi Panel -->
+    <div id="fofi-panel" onclick="if(event.target===this) closeFofi()">
+        <div class="fofi-sheet">
+            <div class="fofi-header">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden shadow-inner">
+                        <span class="fofi-avatar" style="width:34px;height:34px;">
+                            <svg viewBox="0 0 64 64" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M18 26c-1-11 7-19 14-19s15 8 14 19c-2-6-7-9-14-9s-12 3-14 9z" fill="#1a120b"/>
+                                <circle cx="32" cy="28" r="13" fill="#eab98a"/>
+                                <circle cx="27" cy="27" r="1.4" fill="#1a120b"/>
+                                <circle cx="37" cy="27" r="1.4" fill="#1a120b"/>
+                                <path d="M26 33c2 2.5 10 2.5 12 0" stroke="#7a4526" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+                                <rect x="27" y="38" width="10" height="7" rx="3" fill="#eab98a"/>
+                                <path d="M10 64c1-13 10-20 22-20s21 7 22 20z" fill="#1f2937"/>
+                                <path d="M27 44l5 9 5-9-5 4z" fill="#f8fafc"/>
+                                <path d="M32 44l-9 20-4-7 6-15z" fill="#111827"/>
+                                <path d="M32 44l9 20 4-7-6-15z" fill="#111827"/>
+                                <circle cx="43" cy="52" r="1.6" fill="#00a884"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-sm">FOFi</h3>
+                        <p class="text-[10px] opacity-80 font-bold">مساعدك في Sharride 💬</p>
+                    </div>
+                </div>
+                <button onclick="closeFofi()" class="text-white/80 text-2xl leading-none px-1">×</button>
+            </div>
+            <div id="fofi-body" class="fofi-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal التعديل -->
+    <div id="global-edit-form">
+        <div class="edit-modal shadow-2xl space-y-4">
+            <h3 class="font-black text-center text-amber-800 italic text-xl border-b border-amber-200 pb-2">📝 تعديل الرحلة</h3>
+            <input type="hidden" id="edit-id"><input type="hidden" id="edit-mode">
+            <div id="edit-admin-area" class="hidden space-y-2 bg-red-50 border border-red-200 rounded-2xl p-3">
+                <p class="text-[10px] font-black text-red-600 text-center">🔑 صلاحيات الأدمن</p>
+                <select id="edit-role" onchange="toggleEditCapArea()" class="form-input font-bold text-xs border-red-200"><option value="captain">كابتن 🚗</option><option value="passenger">راكب 🙋‍♂️</option></select>
+                <input type="tel" id="edit-phone" placeholder="رقم واتساب الناشر 01xxxxxxxxx" class="form-input text-center font-black border-red-200">
+            </div>
+            <select id="edit-o" class="form-input font-bold text-xs border-amber-200"></select>
+            <select id="edit-d" class="form-input font-bold text-xs border-amber-200"></select>
+            <div class="space-y-3">
+                <div class="time-select-group"><select id="edit-h1"></select><span>:</span><select id="edit-m1"></select><select id="edit-p1"><option>صباحاً</option><option>مساءً</option></select></div>
+                <div class="time-select-group"><select id="edit-h2"></select><span>:</span><select id="edit-m2"></select><select id="edit-p2"><option>مساءً</option><option>صباحاً</option></select></div>
+            </div>
+            <div id="edit-cap-area">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="edit-price" placeholder="السعر" class="form-input text-xs font-black border-amber-200 text-center">
+                    <select id="edit-seats" class="form-input text-xs font-black border-amber-200"><option value="1">1 مقعد</option><option value="2">2 مقعد</option><option value="3">3 مقاعد</option><option value="4">4 مقاعد</option></select>
+                </div>
+                <select id="edit-ac" class="form-input text-xs font-black mt-2 border-amber-200"><option value="true">✅ مكيفة</option><option value="false">❌ بدون تكييف</option></select>
+            </div>
+            <textarea id="edit-notes" class="form-input h-24 text-xs font-bold text-right border-amber-200" placeholder="الملاحظات"></textarea>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveEdit()" class="flex-1 bg-amber-600 text-white p-4 rounded-2xl font-black shadow-lg">حفظ التغييرات ✅</button>
+                <button onclick="closeEdit()" class="bg-gray-400 text-white p-4 rounded-2xl font-black">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال الإشعارات -->
+    <div id="notif-modal" class="hidden fixed inset-0 z-[600] bg-black/70 flex items-center justify-center p-4" onclick="closeNotifications()">
+        <div class="bg-white rounded-[2.5rem] p-6 max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-black text-lg text-slate-800">🔔 الإشعارات</h2>
+                <button onclick="closeNotifications()" class="text-gray-400 text-2xl leading-none px-2">×</button>
+            </div>
+            <button onclick="markAllNotificationsRead()" class="text-[10px] text-[#00a884] font-black underline mb-3 self-start">تحديد الكل كمقروء</button>
+            <div id="notif-list" class="overflow-y-auto space-y-2 flex-1"></div>
+        </div>
+    </div>
+
+    <!-- مودال عرض رحلة واحدة -->
+    <div id="single-trip-modal" class="hidden fixed inset-0 z-[700] bg-black/80 flex items-center justify-center p-4" onclick="closeSingleTripModal()">
+        <div class="bg-white rounded-[2.5rem] p-5 max-w-sm w-full max-h-[85vh] flex flex-col shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-black text-lg text-slate-800">🎉 الرحلة المتوافقة</h2>
+                <button onclick="closeSingleTripModal()" class="text-gray-400 text-2xl leading-none px-2">×</button>
+            </div>
+            <div id="single-trip-content" class="overflow-y-auto flex-1"></div>
+        </div>
+    </div>
+
+    <!-- شيت مشاركة الرحلة -->
+    <div id="share-sheet" onclick="if(event.target===this) closeShareSheet()">
+        <div class="share-sheet-inner" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between">
+                <h3 class="font-black text-slate-800 text-sm">شارك الرحلة 📤</h3>
+                <button onclick="closeShareSheet()" class="text-gray-400 text-2xl leading-none px-1">×</button>
+            </div>
+            <p class="text-[10px] text-gray-400 font-bold mt-1">اختار المنصة اللي عايز تشارك بيها</p>
+            <div class="share-options-row">
+                <button class="share-opt" onclick="shareVia('whatsapp')">
+                    <span class="share-opt-icon" style="background:#25D366;">💬</span>
+                    <span>واتساب</span>
+                </button>
+                <button class="share-opt" onclick="shareVia('messenger')">
+                    <span class="share-opt-icon" style="background:#0084FF;">💌</span>
+                    <span>ماسنجر</span>
+                </button>
+                <button class="share-opt" onclick="shareVia('facebook')">
+                    <span class="share-opt-icon" style="background:#1877F2;">📘</span>
+                    <span>فيسبوك</span>
+                </button>
+                <button class="share-opt" onclick="shareVia('copy')">
+                    <span class="share-opt-icon" style="background:#64748b;">🔗</span>
+                    <span>نسخ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- شيت تأكيد فتح واتساب -->
+    <div id="wa-confirm-sheet" onclick="if(event.target===this) closeWaConfirmSheet()">
+        <div class="share-sheet-inner" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between">
+                <h3 id="wa-confirm-title" class="font-black text-slate-800 text-sm">تواصل واتساب 💬</h3>
+                <button onclick="closeWaConfirmSheet()" class="text-gray-400 text-2xl leading-none px-1">×</button>
+            </div>
+            <p id="wa-confirm-subtitle" class="text-[11px] text-gray-500 font-bold mt-2 mb-4 leading-relaxed">دوس على الزرار عشان يفتح تطبيق واتساب مباشرة</p>
+            <a id="wa-confirm-link" href="#" onclick="closeWaConfirmSheet()" class="btn-green w-full text-center block text-sm py-4">فتح واتساب الآن 💬</a>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://owzaevvsvwufozynzvin.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93emFldnZzdnd1Zm96eW56dmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDQ4NTgsImV4cCI6MjEwMTA4MDg1OH0.LRd_ekWBrk_BWDPv1PSmpSD9RygerdeeUCHUOQlwukQ";
+        let sb;
+        const LOCS = ["أكتوبر", "الشيخ زايد", "القرية الذكية", "حدائق أكتوبر", "حدائق الأهرام", "الهرم", "فيصل", "أرض اللواء", "ميدان لبنان", "المهندسين", "الدقي", "الكيت كات", "إمبابة", "المعادي", "زهراء المعادي", "المقطم", "المنيل", "جاردن سيتي", "مصر القديمة", "وسط البلد ومحيطها", "حلوان", "البدرشين", "شبرا مصر", "الساحل", "شبرا الخيمة", "مدينة نصر", "مصر الجديدة", "المطرية", "عين شمس", "المرج", "المرج الجديدة", "جسر السويس", "النزهة", "التجمع الأول", "التجمع الثالث", "التجمع الخامس", "كايرو فيستيفال", "أكاديمية الشرطة", "الجامعة الأمريكية", "الشروق", "مدينة بدر", "العبور", "العاشر من رمضان", "العاصمة الإدارية"];
+        let tripsPublic = [];
+        let tripsMine = [];
+        let tripsAdmin = [];
+        let openModalTripId = null;
+        let openModalTripMode = null;
+        let viaPoints = []; // النقاط الوسيطة في Route Builder
+
+        const PUBLIC_TRIP_COLS = "id,user_role,origin,destination,departure_time,return_time,notes,seats_available,price_per_seat,has_ac,status,joined_passengers,created_at,route_points,recurrence_days";
+        const ADMIN_HASH = '#owner-access';
+        const busyActions = new Set();
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function extractPhoneFromRpcData(data) {
+            if (data === null || data === undefined) return '';
+            if (typeof data === 'string' || typeof data === 'number') return String(data);
+            if (Array.isArray(data)) {
+                if (data.length === 0) return '';
+                const first = data[0];
+                if (typeof first === 'string' || typeof first === 'number') return String(first);
+                if (first && typeof first === 'object') return first.whatsapp_number || first.phone || first.value || '';
+                return '';
+            }
+            if (typeof data === 'object') return data.whatsapp_number || data.phone || data.value || '';
+            return '';
+        }
+
+        async function openWhatsApp(tripId, message, sheetTitle, sheetSubtitle) {
+            try {
+                const { data, error } = await sb.rpc('get_trip_contact', { p_trip_id: tripId });
+                if (error) {
+                    alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
+                    console.error(error);
+                    return;
+                }
+                const phone = extractPhoneFromRpcData(data);
+                if (!phone) {
+                    alert('تعذر جلب رقم التواصل، جرب تاني لاحقًا ❌');
+                    return;
+                }
+                const url = `https://wa.me/${encodeURIComponent(phone)}` + (message ? `?text=${encodeURIComponent(message)}` : '');
+                showWhatsAppConfirmSheet(url, sheetTitle, sheetSubtitle);
+            } catch (e) {
+                alert('حدث خطأ أثناء محاولة التواصل ❌');
+                console.error(e);
+            }
+        }
+
+        function showWhatsAppConfirmSheet(url, title, subtitle) {
+            document.getElementById('wa-confirm-link').href = url;
+            document.getElementById('wa-confirm-title').textContent = title || 'تواصل واتساب 💬';
+            document.getElementById('wa-confirm-subtitle').textContent = subtitle || 'دوس على الزرار عشان يفتح تطبيق واتساب مباشرة';
+            document.getElementById('wa-confirm-sheet').classList.add('open');
+        }
+        function closeWaConfirmSheet() {
+            document.getElementById('wa-confirm-sheet').classList.remove('open');
+        }
+
+        function genToken() {
+            if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+            return 'tk' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        function getLocalTokens() {
+            try { return JSON.parse(localStorage.getItem('sr_tokens') || '{}'); } catch (e) { return {}; }
+        }
+        function getLocalToken(id) { return getLocalTokens()[id]; }
+        function saveLocalToken(id, token) {
+            const t = getLocalTokens(); t[id] = token; localStorage.setItem('sr_tokens', JSON.stringify(t));
+        }
+        function getJoinedTrips() {
+            try { return JSON.parse(localStorage.getItem('sr_joined') || '{}'); } catch (e) { return {}; }
+        }
+        function getMyPhone() {
+            try { return localStorage.getItem('sr_my_phone') || ''; } catch (e) { return ''; }
+        }
+        function saveMyPhone(phone) {
+            try { localStorage.setItem('sr_my_phone', phone); } catch (e) {}
+        }
+        function promptJoinPhone() {
+            const saved = getMyPhone();
+            if (saved) return saved;
+            const raw = prompt("أدخل رقم تليفونك (01xxxxxxxxx) — هيتحفظ على الجهاز ده وميتسألش عنه تاني إلا لو غيّرته بنفسك:");
+            if (!raw) return null;
+            const p = raw.trim().replace(/[\s\-]/g, '');
+            if (!/^01[0125]\d{8}$/.test(p)) { alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)"); return null; }
+            saveMyPhone(p);
+            return p;
+        }
+        function changeMyPhone() {
+            const current = getMyPhone();
+            const raw = prompt(current ? `رقمك الحالي المحفوظ: ${current}\nاكتب رقمك الجديد (01xxxxxxxxx):` : "اكتب رقمك (01xxxxxxxxx):");
+            if (!raw) return;
+            const p = raw.trim().replace(/[\s\-]/g, '');
+            if (!/^01[0125]\d{8}$/.test(p)) return alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)");
+            saveMyPhone(p);
+            alert('تم تحديث رقمك المحفوظ ✅');
+            renderMyPhoneCard();
+            renderHomePhoneCard();
+        }
+        function renderMyPhoneCard() {
+            const el = document.getElementById('my-phone-card');
+            if (!el) return;
+            const phone = getMyPhone();
+            el.innerHTML = phone
+                ? `<div class="flex items-center justify-between gap-2 bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-blue-700 text-right">📱 رقم تسجيلك المحفوظ: ${escapeHtml(phone)}</p><button onclick="changeMyPhone()" class="bg-blue-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button></div>`
+                : `<div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-amber-700 text-right">📱 لسه مفيش رقم تسجيل محفوظ على الجهاز ده</p><button onclick="changeMyPhone()" class="bg-amber-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">إضافة رقمي</button></div>`;
+        }
+        function renderHomePhoneCard() {
+            const el = document.getElementById('home-phone-card');
+            if (!el) return;
+            const phone = getMyPhone();
+            if (phone) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+            el.style.display = '';
+            el.innerHTML = `
+                <h2 class="text-base font-black text-slate-800 mb-2 text-center">سجّل رقمك دلوقتي 📱</h2>
+                <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">إجهَز لمشوارك الجاي وضيف رقمك 👋</p>
+                <div class="flex gap-2">
+                    <input type="tel" id="home-phone-input" placeholder="01xxxxxxxxx" class="form-input text-center font-black flex-1 min-w-0">
+                    <button onclick="saveHomePhone()" class="bg-[#00a884] text-white font-black rounded-2xl px-6 py-[15px] text-sm shadow-md shrink-0" style="width:auto;">حفظ</button>
+                </div>`;
+        }
+
+        async function saveHomePhone() {
+            const input = document.getElementById('home-phone-input');
+            const raw = input.value.trim().replace(/[\s\-]/g, '');
+            if (!/^01[0125]\d{8}$/.test(raw)) return alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)");
+            saveMyPhone(raw);
+            renderHomePhoneCard();
+            try { await sb.from('leads').insert([{ phone: raw, source: 'home_banner' }]); } catch (e) { console.error(e); }
+        }
+
+        function saveJoinedTrip(id, phone) {
+            const j = getJoinedTrips(); j[id] = phone; localStorage.setItem('sr_joined', JSON.stringify(j));
+        }
+        function removeJoinedTripLocal(id) {
+            const j = getJoinedTrips(); delete j[id]; localStorage.setItem('sr_joined', JSON.stringify(j));
+        }
+        function copyMgmtCode(code) {
+            navigator.clipboard.writeText(code).then(() => alert('تم نسخ الكود ✅')).catch(() => prompt('انسخ الكود يدويًا:', code));
+        }
+
+        async function linkTripWithCode(id) {
+            const code = prompt('الصق هنا كود إدارة الرحلة اللي وصلك:');
+            if (!code) return;
+            const { data, error } = await sb.rpc('verify_trip_token', { p_id: id, p_token: code.trim() });
+            if (error || !data) { alert('الكود غير صحيح ❌'); return; }
+            saveLocalToken(id, code.trim());
+            alert('تم ربط الرحلة بجهازك ✅ دلوقتي تقدر تعدّل/تدير الرحلة دي من هنا.');
+            apiGetMyTrips();
+            refreshNotifBadge();
+        }
+
+        async function linkTripByCodeOnly() {
+            const code = prompt('اكتب هنا كود إدارة الرحلة اللي وصلك:');
+            if (!code) return;
+            const { data: tripId, error } = await sb.rpc('find_trip_by_mgmt_code', { p_token: code.trim() });
+            if (error || !tripId) { alert('الكود غير صحيح ❌'); return; }
+            saveLocalToken(tripId, code.trim());
+            alert('تم ربط الرحلة بجهازك ✅ دلوقتي تقدر تشوفها من "رحلاتي".');
+            apiGetMyTrips();
+            refreshNotifBadge();
+        }
+
+        // Notification Badges & Handling
+        const NOTIF_ICONS = { match: '🎉', joined: '🤝', left: '👋', status_change: '🔄' };
+
+        function fmtNotifTime(iso) {
+            try { return new Date(iso).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'numeric' }); }
+            catch (e) { return ''; }
+        }
+
+        let lastNotifCount = 0;
+        let notifCountKnown = false;
+        let lastSeenMatchNotifId = null;
+
+        async function refreshNotifBadge() {
+            const badge = document.getElementById('notif-badge');
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) { badge.classList.add('hidden'); return; }
+            try {
+                const { data, error } = await sb.rpc('get_my_notifications', { p_tokens: tokens });
+                if (error) { console.error(error); return; }
+                const notifData = data || [];
+
+                const unreadCount = notifData.filter(n => !n.is_read).length;
+                if (unreadCount > 0) { badge.textContent = unreadCount > 9 ? '9+' : unreadCount; badge.classList.remove('hidden'); }
+                else { badge.classList.add('hidden'); }
+
+                const newestUnreadMatch = notifData.find(n => n.type === 'match' && !n.is_read && n.related_trip_id);
+                const isGenuinelyNewMatch = notifCountKnown && newestUnreadMatch && newestUnreadMatch.id !== lastSeenMatchNotifId;
+
+                if (isGenuinelyNewMatch) {
+                    showNotifToast(newestUnreadMatch);
+                } else if (notifCountKnown && !newestUnreadMatch && unreadCount > lastNotifCount) {
+                    showNotifToast(null);
+                }
+                if (newestUnreadMatch) lastSeenMatchNotifId = newestUnreadMatch.id;
+
+                lastNotifCount = unreadCount;
+                notifCountKnown = true;
+            } catch (e) { console.error(e); }
+        }
+
+        let notifToastTimer;
+        function showNotifToast(matchNotif) {
+            const toast = document.getElementById('notif-toast');
+            if (!toast) return;
+            const titleEl = toast.querySelector('.notif-toast-title');
+            const subEl = toast.querySelector('.notif-toast-sub');
+            const btn = toast.querySelector('button');
+            if (matchNotif && matchNotif.related_trip_id) {
+                titleEl.textContent = '🎉 ظهر تطابق محتمل لبحثك';
+                subEl.textContent = '👈 شوف الرحلة';
+                btn.onclick = () => { toast.classList.remove('show'); openSingleTripModal(matchNotif.related_trip_id); };
+            } else {
+                titleEl.textContent = 'عندك تحديث جديد';
+                subEl.textContent = 'دوس هنا تشوف الإشعارات';
+                btn.onclick = openNotifFromToast;
+            }
+            clearTimeout(notifToastTimer);
+            toast.classList.add('show');
+            notifToastTimer = setTimeout(() => toast.classList.remove('show'), 4500);
+        }
+        function openNotifFromToast() {
+            document.getElementById('notif-toast').classList.remove('show');
+            openNotifications();
+        }
+
+        async function openNotifications() {
+            const modal = document.getElementById('notif-modal');
+            const list = document.getElementById('notif-list');
+            modal.classList.remove('hidden');
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) {
+                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm">لسه معندكش رحلة مربوطة بالجهاز ده، فمفيش إشعارات تتعرض.</p>`;
+                return;
+            }
+            list.innerHTML = '<p class="text-center py-10 text-gray-400 font-black text-sm">جاري التحميل...</p>';
+            const { data, error } = await sb.rpc('get_my_notifications', { p_tokens: tokens });
+            if (error) {
+                list.innerHTML = `<p class="text-center py-10 text-red-400 font-black text-sm">فشل تحميل الإشعارات ❌</p>`;
+                console.error(error);
+                return;
+            }
+            if (!data || data.length === 0) {
+                list.innerHTML = `<p class="text-center py-10 text-gray-400 font-black text-sm leading-relaxed">لسه مفيش تحديثات.<br>لما حد يهتم بمشوارك أو يظهر تطابق مناسب، هتلاقيه هنا 🔔</p>`;
+                return;
+            }
+
+            const sortedData = [...data].sort((a, b) => {
+                const aPriority = (a.type === 'match' && !a.is_read) ? 1 : 0;
+                const bPriority = (b.type === 'match' && !b.is_read) ? 1 : 0;
+                return bPriority - aPriority;
+            });
+            list.innerHTML = sortedData.map(n => {
+                const isMatch = n.type === 'match' && !!n.related_trip_id;
+                const isOwnTripUpdate = (n.type === 'joined' || n.type === 'left') && !!n.trip_id;
+                const clickable = isMatch || isOwnTripUpdate;
+                const clickTarget = isMatch ? `openSingleTripModal('${n.related_trip_id}')` : (isOwnTripUpdate ? `openOwnTripModal('${n.trip_id}')` : '');
+                const isMatchUnread = n.type === 'match' && !n.is_read;
+                const styleClass = n.is_read ? 'bg-gray-50 border-gray-100' : (isMatchUnread ? 'bg-orange-50 border-orange-300' : 'bg-emerald-50 border-emerald-200');
+                return `
+                <div class="p-3 rounded-2xl border ${styleClass} ${clickable ? 'cursor-pointer active:scale-95 transition' : ''}"
+                     ${clickable ? `onclick="${clickTarget}"` : ''}>
+                    <div class="flex items-start gap-2">
+                        <span class="text-lg">${NOTIF_ICONS[n.type] || '🔔'}</span>
+                        <div class="flex-1 text-right">
+                            <p class="font-black text-xs text-slate-800">${escapeHtml(n.title)}</p>
+                            ${n.body ? `<p class="text-[11px] text-gray-500 font-bold mt-1">${escapeHtml(n.body)}</p>` : ''}
+                            <p class="text-[9px] text-gray-400 font-bold mt-1">${fmtNotifTime(n.created_at)}</p>
+                            ${clickable ? `<p class="text-[10px] text-orange-600 font-black mt-2">👈 دوس هنا تشوف الرحلة</p>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
+            if (unreadIds.length > 0) {
+                await sb.rpc('mark_notifications_read', { p_tokens: tokens, p_ids: unreadIds });
+                refreshNotifBadge();
+            }
+        }
+
+        function closeNotifications() { document.getElementById('notif-modal').classList.add('hidden'); }
+
+        async function markAllNotificationsRead() {
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) return;
+            await sb.rpc('mark_all_notifications_read', { p_tokens: tokens });
+            openNotifications();
+        }
+
+        function syncHeaderHeight() {
+            const header = document.querySelector('header');
+            if (header) document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+        }
+        window.addEventListener('resize', syncHeaderHeight);
+
+        let scrollStopTimer;
+        const scrollTopBtn = () => document.getElementById('scroll-top-btn');
+
+        window.addEventListener('scroll', () => {
+            const btn = scrollTopBtn();
+            if (btn) btn.classList.remove('show');
+            clearTimeout(scrollStopTimer);
+            scrollStopTimer = setTimeout(() => {
+                if (btn && window.scrollY > 250) btn.classList.add('show');
+            }, 220);
+        }, { passive: true });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const btn = scrollTopBtn();
+            if (btn) btn.classList.remove('show');
+        }
+
+        window.onload = async function() {
+            setTimeout(() => { document.getElementById('loading-overlay').style.opacity = '0'; setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500); }, 2000);
+            syncHeaderHeight();
+            try {
+                sb = supabase.createClient(SB_URL, SB_KEY);
+                fillDropdowns();
+                homeRoleSelect('captain');
+                renderHomePhoneCard();
+                await checkAdminSession();
+                trackVisit();
+                apiGetTrips();
+                refreshNotifBadge();
+                setInterval(refreshNotifBadge, 45000);
+                if (location.hash.startsWith('#trip=')) {
+                    const sharedTripId = decodeURIComponent(location.hash.replace('#trip=', ''));
+                    if (sharedTripId) openSingleTripModal(sharedTripId);
+                    history.replaceState(null, '', location.pathname + location.search);
+                }
+            } catch (e) { console.error(e); }
+        };
+
+        async function checkAdminSession() {
+            const { data: { session } } = await sb.auth.getSession();
+            const navAdmin = document.getElementById('nav-admin');
+            if (session || location.hash === ADMIN_HASH) navAdmin.style.display = '';
+            if (session) {
+                document.getElementById('admin-auth').style.display = 'none';
+                document.getElementById('admin-panel').classList.remove('hidden');
+                loadAdminStats();
+                apiAdminReload();
+            }
+        }
+
+        async function trackVisit() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) return;
+            try { await sb.rpc('increment_visit_count'); } catch (e) {}
+        }
+
+        function uiTab(id) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('view-' + id).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'text-[#00a884]'));
+            document.getElementById('nav-' + id).classList.add('active');
+            if(id === 'search') apiGetTrips();
+            if(id === 'my') { apiGetMyTrips(); renderMyPhoneCard(); }
+        }
+
+        function uiSearchSwitch(identity) {
+            document.getElementById('f-user-identity').value = identity;
+            document.getElementById('search-role-cap').className = identity === 'captain' ? "flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500";
+            document.getElementById('search-role-pas').className = identity === 'passenger' ? "flex-1 py-3 rounded-lg font-black text-[12px] bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-lg font-black text-[12px] text-gray-500";
+            apiGetTrips();
+        }
+
+        function uiRole(r) {
+            document.getElementById('in-role').value = r;
+            const isCap = r === 'captain';
+            document.getElementById('cap-box').classList.toggle('hidden', !isCap);
+            document.getElementById('role-cap').className = isCap ? "flex-1 py-3 rounded-xl font-black text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-xl font-black text-xs text-gray-500";
+            document.getElementById('role-pas').className = !isCap ? "flex-1 py-3 rounded-xl font-black text-xs bg-white text-[#00a884] shadow-sm" : "flex-1 py-3 rounded-xl font-black text-xs text-gray-500";
+        }
+
+        const HOME_ROLE_CONTENT = {
+            captain: {
+                text: 'سجّل خط سيرك ومواعيدك مرة واحدة وسيب Sharride تنظملك الركاب المناسبين لطريقك 🙌',
+                btnLabel: 'سجّل خط سيرك الآن ➕',
+                btnClass: 'btn-green',
+                btnAction: "uiTab('post'); uiRole('captain')"
+            },
+            passenger: {
+                text: 'ابحث عن كابتن بيعمل نفس مشوارك، أو سجّل نفسك كراكب عشان الكباتن يلاقوك بسهولة 🚗',
+                btnLabel: '🔎 دور على كابتن في طريقك',
+                btnClass: 'w-full bg-orange-500 hover:bg-orange-600 text-white rounded-[22px] font-black py-4 shadow-lg transition',
+                btnAction: "uiTab('search'); uiSearchSwitch('captain')",
+                linkLabel: 'أو سجّل نفسك كراكب بدل البحث',
+                linkAction: "uiTab('post'); uiRole('passenger')"
+            }
+        };
+
+        function homeRoleSelect(role) {
+            const capBtn = document.getElementById('home-role-cap');
+            const pasBtn = document.getElementById('home-role-pas');
+            capBtn.className = role === 'captain'
+                ? "flex-1 py-3 rounded-xl font-black text-[12px] bg-white text-[#00a884] shadow-sm transition"
+                : "flex-1 py-3 rounded-xl font-black text-[12px] text-slate-500 transition";
+            pasBtn.className = role === 'passenger'
+                ? "flex-1 py-3 rounded-xl font-black text-[12px] bg-white text-orange-600 shadow-sm transition"
+                : "flex-1 py-3 rounded-xl font-black text-[12px] text-slate-500 transition";
+
+            const c = HOME_ROLE_CONTENT[role];
+            document.getElementById('home-role-desc').innerHTML = `
+                <p class="text-[12px] text-slate-500 font-bold leading-relaxed mb-4 text-center">${c.text}</p>
+                <button onclick="${c.btnAction}" class="${c.btnClass} text-sm">${c.btnLabel}</button>
+                ${c.linkLabel ? `<button onclick="${c.linkAction}" class="w-full mt-2 text-[11px] font-black text-slate-400 underline">${c.linkLabel}</button>` : ''}
+            `;
+        }
+
+        // Route Builder Dynamic UI
+        function addViaPoint(val = '') {
+            const container = document.getElementById('via-points-container');
+            const id = 'via-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
+            const div = document.createElement('div');
+            div.className = 'route-point-item';
+            div.id = id;
+            
+            let optionsHtml = '<option value="">اختر نقطة وسيطة</option>';
+            LOCS.forEach(l => { optionsHtml += `<option value="${l}" ${l === val ? 'selected' : ''}>${l}</option>`; });
+
+            div.innerHTML = `
+                <span class="text-xs text-slate-400 font-bold">📍</span>
+                <select class="via-select">${optionsHtml}</select>
+                <button type="button" onclick="document.getElementById('${id}').remove()" class="text-red-500 font-bold text-xs px-2">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function getFullRouteArray() {
+            const o = document.getElementById('in-o').value;
+            const d = document.getElementById('in-d').value;
+            const vias = Array.from(document.querySelectorAll('.via-select')).map(s => s.value).filter(Boolean);
+            const route = [];
+            if (o) route.push(o);
+            vias.forEach(v => route.push(v));
+            if (d) route.push(d);
+            return route;
+        }
+
+        // Match Scoring Logic
+        function calculateTripMatchScore(trip, searchOrigin, searchDest) {
+            if (!searchOrigin && !searchDest) return { score: 100, tag: null };
+            
+            const route = (trip.route_points && trip.route_points.length > 0) 
+                ? trip.route_points 
+                : [trip.origin, trip.destination];
+
+            const idxO = searchOrigin ? route.indexOf(searchOrigin) : -1;
+            const idxD = searchDest ? route.indexOf(searchDest) : -1;
+
+            if (searchOrigin && searchDest) {
+                if (idxO !== -1 && idxD !== -1 && idxO < idxD) {
+                    if (trip.origin === searchOrigin && trip.destination === searchDest) return { score: 100, tag: 'مطابق تماماً 🎯' };
+                    return { score: 85, tag: 'على نفس خط السير 📍' };
+                }
+            } else if (searchOrigin && idxO !== -1) {
+                return { score: 70, tag: 'يمر بنقطة الانطلاق 🚗' };
+            } else if (searchDest && idxD !== -1) {
+                return { score: 70, tag: 'يمر بنقطة الوصول 🏁' };
+            }
+
+            return { score: 0, tag: null };
+        }
+
+        async function apiGetTrips() {
+            const list = document.getElementById('list-public');
+            list.innerHTML = '<p class="text-center py-20 text-gray-400 font-black italic">جاري البحث...</p>';
+            const o = document.getElementById('f-o').value;
+            const d = document.getElementById('f-d').value;
+            const role = document.getElementById('f-user-identity').value;
+            const expanded = document.getElementById('f-expanded').checked;
+
+            let q = sb.from('public_trips').select(PUBLIC_TRIP_COLS).eq('status', 'active').eq('user_role', role);
+            
+            const { data, error } = await q;
+            if (error) {
+                list.innerHTML = '<p class="text-center py-20 text-red-400 font-black italic">حدث خطأ أثناء تحميل البيانات ❌</p>';
+                return;
+            }
+
+            if (data) {
+                let filtered = data.map(t => {
+                    const match = calculateTripMatchScore(t, o, d);
+                    return { ...t, matchScore: match.score, matchTag: match.tag };
+                });
+
+                if (o || d) {
+                    if (!expanded) {
+                        filtered = filtered.filter(t => t.matchScore > 0);
+                    } else {
+                        filtered.sort((a, b) => b.matchScore - a.matchScore);
+                    }
+                }
+
+                tripsPublic = filtered;
+
+                if (filtered.length > 0) {
+                    let html = '';
+                    filtered.forEach(t => {
+                        html += card(t, 'public');
+                    });
+                    list.innerHTML = html;
+                } else {
+                    list.innerHTML = `<div class="no-results-card">
+                        <div class="text-4xl mb-4">✨</div>
+                        <h3 class="text-[#00a884] font-black mb-3 text-xl">${role==='captain'?'ملقيتش كابتن في طريقك؟':'ملقيتش راكب؟'}</h3>
+                        <p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">جرب تفعّل "عرض كافة المناطق" للبحث الأوسع، أو سجّل مشوارك وهما هيلاقوك!</p>
+                        <button onclick="uiTab('post'); uiRole('${role}');" class="btn-green w-full text-lg shadow-xl pulse-loading italic">سجل مشوارك الآن ➕</button>
+                    </div>`;
+                }
+            }
+        }
+
+        function noLinkedTripsCard() {
+            return `<div class="no-results-card"><div class="text-4xl mb-4">📭</div><h3 class="text-[#00a884] font-black mb-3 text-xl">مفيش رحلات مربوطة بالجهاز ده</h3><p class="text-gray-600 text-sm mb-6 font-bold leading-relaxed">سجل مشوارك الأول دلوقتي، أو لو نشرت رحلة قبل كده من جهاز تاني، استخدم الكود لاسترجاعها.</p><button onclick="uiTab('post')" class="btn-green w-full text-lg shadow-xl italic mb-2">سجل مشوارك الآن ➕</button><button onclick="linkTripByCodeOnly()" class="w-full bg-orange-500 text-white py-3 rounded-2xl font-black text-[13px] shadow-md">🔑 رجّع رحلاتك القديمة</button></div>`;
+        }
+
+        async function apiGetMyTrips() {
+            const list = document.getElementById('list-mine');
+            const tokens = Object.values(getLocalTokens());
+            if (tokens.length === 0) {
+                list.innerHTML = noLinkedTripsCard();
+                return;
+            }
+            list.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل رحلاتك...</p>';
+            const { data, error } = await sb.rpc('get_my_trips_by_tokens', { p_tokens: tokens });
+            if (error) {
+                list.innerHTML = `<p class="text-center py-16 text-red-400 font-black italic">حصل خطأ أثناء تحميل رحلاتك، جرب تاني ❌</p>`;
+                console.error(error);
+                return;
+            }
+            if (data) {
+                const visibleData = data.filter(t => t.status !== 'archived');
+                tripsMine = visibleData;
+                if (visibleData.length > 0) {
+                    list.innerHTML = visibleData.map(t => card(t, 'my')).join('');
+                } else {
+                    list.innerHTML = noLinkedTripsCard();
+                }
+            }
+        }
+
+        async function apiPost(event) {
+            event.preventDefault();
+            const h1 = document.getElementById('in-h1').value;
+            const h2 = document.getElementById('in-h2').value;
+            if(!h1 && !h2) return alert('يجب اختيار موعد واحد على الأقل');
+
+            const myPhone = promptJoinPhone();
+            if (!myPhone) return;
+
+            const btn = document.getElementById('btn-pub'); btn.disabled = true; btn.innerText = "جاري الحفظ...";
+
+            const token = genToken();
+            const routePoints = getFullRouteArray();
+
+            const payload = {
+                user_role: document.getElementById('in-role').value,
+                origin: document.getElementById('in-o').value,
+                destination: document.getElementById('in-d').value,
+                route_points: routePoints,
+                departure_time: h1 ? `${h1}:${document.getElementById('in-m1').value} ${document.getElementById('in-p1').value}` : '',
+                return_time: h2 ? `${h2}:${document.getElementById('in-m2').value} ${document.getElementById('in-p2').value}` : null,
+                whatsapp_number: "2" + myPhone,
+                notes: document.getElementById('in-notes').value,
+                seats_available: document.getElementById('in-role').value === 'captain' ? (parseInt(document.getElementById('in-seats').value) || 0) : 0,
+                has_ac: document.getElementById('in-ac').value === "true",
+                price_per_seat: document.getElementById('in-price').value ? document.getElementById('in-price').value + " ج.م" : "",
+                status: 'active',
+                joined_passengers: [],
+                mgmt_code: token
+            };
+
+            const { data, error } = await sb.from('trips').insert([payload]).select('id').single();
+            if(!error && data) {
+                saveLocalToken(data.id, token);
+                alert('تم تسجيل مشوارك بنجاح! 🎉');
+                document.getElementById('postForm').reset();
+                document.getElementById('via-points-container').innerHTML = '';
+                uiTab('search');
+                refreshNotifBadge();
+            } else if (error) {
+                alert('فشل النشر ❌: ' + error.message);
+                console.error(error);
+            }
+            btn.disabled = false; btn.innerText = "نشر المشوار الآن 🚀";
+        }
+
+        function openEdit(id, mode) {
+            const source = mode === 'admin' ? tripsAdmin : mode === 'my' ? tripsMine : tripsPublic;
+            const t = source.find(trip => trip.id === id);
+            if(!t) return alert("حدث خطأ في تحميل بيانات الرحلة");
+            const isAdmin = mode === 'admin';
+            const isCap = t.user_role === 'captain';
+            document.getElementById('edit-admin-area').classList.toggle('hidden', !isAdmin);
+            document.getElementById('edit-cap-area').style.display = isCap ? 'block' : 'none';
+            document.getElementById('global-edit-form').style.display = 'flex';
+            document.getElementById('edit-id').value = t.id;
+            document.getElementById('edit-mode').value = mode;
+            document.getElementById('edit-role').value = t.user_role;
+            document.getElementById('edit-phone').value = t.whatsapp_number ? t.whatsapp_number.replace(/^20/, '0') : '';
+            document.getElementById('edit-o').value = t.origin;
+            document.getElementById('edit-d').value = t.destination;
+            
+            if(t.departure_time && t.departure_time !== 'null') {
+                const p = t.departure_time.split(/[: ]/);
+                document.getElementById('edit-h1').value = p[0];
+                document.getElementById('edit-m1').value = p[1];
+                document.getElementById('edit-p1').value = p[2];
+            }
+            if(t.return_time && t.return_time !== 'null') {
+                const p = t.return_time.split(/[: ]/);
+                document.getElementById('edit-h2').value = p[0];
+                document.getElementById('edit-m2').value = p[1];
+                document.getElementById('edit-p2').value = p[2];
+            }
+
+            document.getElementById('edit-price').value = t.price_per_seat ? t.price_per_seat.replace(' ج.م', '') : '';
+            document.getElementById('edit-seats').value = t.seats_available;
+            document.getElementById('edit-ac').value = t.has_ac.toString();
+            document.getElementById('edit-notes').value = t.notes || '';
+        }
+
+        function closeEdit() { document.getElementById('global-edit-form').style.display = 'none'; }
+
+        function toggleEditCapArea() {
+            const isCap = document.getElementById('edit-role').value === 'captain';
+            document.getElementById('edit-cap-area').style.display = isCap ? 'block' : 'none';
+        }
+
+        async function saveEdit() {
+            const id = document.getElementById('edit-id').value;
+            const mode = document.getElementById('edit-mode').value;
+            const source = mode === 'admin' ? tripsAdmin : mode === 'my' ? tripsMine : tripsPublic;
+            const t = source.find(trip => trip.id === id);
+            const isAdmin = mode === 'admin';
+            const isCap = isAdmin ? (document.getElementById('edit-role').value === 'captain') : (t.user_role === 'captain');
+
+            const h1 = document.getElementById('edit-h1').value;
+            const h2 = document.getElementById('edit-h2').value;
+
+            const payload = {
+                origin: document.getElementById('edit-o').value, destination: document.getElementById('edit-d').value,
+                departure_time: h1 ? `${h1}:${document.getElementById('edit-m1').value} ${document.getElementById('edit-p1').value}` : '',
+                return_time: h2 ? `${h2}:${document.getElementById('edit-m2').value} ${document.getElementById('edit-p2').value}` : null,
+                price_per_seat: isCap ? (document.getElementById('edit-price').value ? document.getElementById('edit-price').value + " ج.م" : "") : "",
+                seats_available: isCap ? parseInt(document.getElementById('edit-seats').value) : 0,
+                has_ac: isCap ? (document.getElementById('edit-ac').value === "true") : false,
+                notes: document.getElementById('edit-notes').value
+            };
+
+            if(isAdmin) {
+                const phone = document.getElementById('edit-phone').value;
+                if(!phone || phone.length < 11) return alert('رقم واتساب غير صحيح');
+                payload.whatsapp_number = '2' + phone;
+                payload.user_role = document.getElementById('edit-role').value;
+
+                const { error } = await sb.from('trips').update(payload).eq('id', id);
+                if(error) { alert('فشل التحديث ❌: ' + error.message); return; }
+                alert('تم التحديث بنجاح ✅');
+                closeEdit(); apiAdminReload(); apiGetTrips();
+                return;
+            }
+
+            const token = getLocalToken(id);
+            if(!token) { alert('الرحلة دي مش مربوطة بجهازك.'); return; }
+            const { error } = await sb.rpc('update_trip_secure', { p_id: id, p_token: token, p_payload: payload });
+            if(error) { alert('فشل التحديث ❌: ' + error.message); return; }
+            alert('تم التحديث بنجاح ✅');
+            closeEdit();
+            apiGetMyTrips();
+            apiGetTrips();
+            refreshOpenTripModal(id);
+        }
+
+        async function tripAction(id, act, mode) {
+            if (busyActions.has(id)) return;
+            const confirmMsg = act === 'archive' ? 'هتتخبى الرحلة نهائيًا. تأكيد؟' : 'تأكيد الإجراء؟';
+            if(!confirm(confirmMsg)) return;
+            busyActions.add(id);
+            try {
+                if (mode === 'admin') {
+                    let error;
+                    if(act === 'delperm') ({ error } = await sb.from('trips').delete().eq('id', id));
+                    else if(act === 'done') ({ error } = await sb.from('trips').update({status: 'completed'}).eq('id', id));
+                    else if(act === 'active') ({ error } = await sb.from('trips').update({status: 'active'}).eq('id', id));
+                    else if(act === 'del') ({ error } = await sb.from('trips').update({status: 'deleted'}).eq('id', id));
+                    if(error) throw error;
+                    apiAdminReload();
+                } else {
+                    const token = getLocalToken(id);
+                    if(!token) { alert('الرحلة دي مش مربوطة بجهازك.'); return; }
+                    const realStatus = act === 'done' ? 'completed' : act === 'del' ? 'deleted' : act === 'archive' ? 'archived' : 'active';
+                    const { error } = await sb.rpc('set_trip_status_secure', { p_id: id, p_token: token, p_status: realStatus });
+                    if(error) throw error;
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+                refreshOpenTripModal(id);
+            } catch (e) {
+                alert('فشل تنفيذ الإجراء ❌: ' + e.message);
+            } finally {
+                busyActions.delete(id);
+            }
+        }
+
+        async function joinAction(tripId, origin, dest, ownerRole) {
+            if (busyActions.has(tripId)) return;
+            const newP = promptJoinPhone();
+            if (!newP) return;
+            busyActions.add(tripId);
+            try {
+                const { error } = await sb.rpc('join_trip_secure', { p_id: tripId, p_phone: newP });
+                if (error) {
+                    if (error.message.includes('already_in_another_trip')) alert('انت منضم لرحلة تانية دلوقتي 🙏');
+                    else if (error.message.includes('owns_active_trip')) alert('عندك رحلة شغالة بتاعتك دلوقتي 🙏');
+                    else if (error.message.includes('already_joined')) alert('أنت منضم بالفعل');
+                    else if (error.message.includes('trip_full')) alert('الرحلة اكتملت');
+                    else alert('فشل الانضمام ❌: ' + error.message);
+                    return;
+                }
+
+                saveJoinedTrip(tripId, newP);
+                let msg = ownerRole === 'captain' ? `سلام عليكم يا كابتن، أنا حجزت معاك في رحلة ${origin} عبر Sharride.` : `سلام عليكم، أنا انضميت ليك في رحلة ${origin} عبر Sharride.`;
+                openWhatsApp(tripId, msg, "تم الحجز بنجاح! ✅", "تواصل مع الطرف التاني لتأكيد الميعاد 💬");
+                apiGetTrips();
+                refreshOpenTripModal(tripId);
+                refreshNotifBadge();
+            } finally {
+                busyActions.delete(tripId);
+            }
+        }
+
+        async function leaveTrip(tripId) {
+            if (busyActions.has(tripId)) return;
+            const phone = getJoinedTrips()[tripId];
+            if(!phone) { alert('مفيش بيانات انضمام محفوظة لهذه الرحلة.'); return; }
+            if(!confirm('متأكد إنك عاوز تسيب المجموعة؟')) return;
+            busyActions.add(tripId);
+            try {
+                const { error } = await sb.rpc('leave_trip_secure', { p_id: tripId, p_phone: phone });
+                if(error) throw error;
+                removeJoinedTripLocal(tripId);
+                alert('تم خروجك من المجموعة بنجاح ✅');
+                apiGetTrips();
+                refreshOpenTripModal(tripId);
+            } catch (e) {
+                removeJoinedTripLocal(tripId);
+                alert('تم حذفك من الرحلة ✅');
+                apiGetTrips();
+                refreshOpenTripModal(tripId);
+            } finally {
+                busyActions.delete(tripId);
+            }
+        }
+
+        async function removeJoiner(tripId, phoneToRemove, mode) {
+            if(!confirm('إزالة هذا المنضم؟')) return;
+            try {
+                if (mode === 'admin') {
+                    const { data: trip, error: e1 } = await sb.from('trips').select('joined_passengers').eq('id', tripId).single();
+                    if(e1) throw e1;
+                    const passengers = (trip.joined_passengers || []).filter(p => p !== phoneToRemove);
+                    await sb.from('trips').update({ joined_passengers: passengers, status: 'active' }).eq('id', tripId);
+                    apiAdminReload();
+                } else {
+                    const token = getLocalToken(tripId);
+                    if(!token) return alert('الرحلة مش مربوطة بجهازك');
+                    await sb.rpc('remove_joiner_secure', { p_id: tripId, p_token: token, p_phone: phoneToRemove });
+                    apiGetMyTrips();
+                }
+                apiGetTrips();
+                refreshOpenTripModal(tripId);
+            } catch (e) {
+                alert('فشل ❌: ' + e.message);
+            }
+        }
+
+        let shareCtx = { text: '', url: '' };
+        const SHARE_FN_URL = SB_URL + "/functions/v1/share-trip";
+
+        async function shareTrip(text, tripId) {
+            const url = SHARE_FN_URL + '?id=' + encodeURIComponent(tripId);
+            shareCtx = { text, url };
+            if (navigator.share) {
+                navigator.share({ url: url }).catch(() => {});
+            } else {
+                document.getElementById('share-sheet').classList.add('open');
+            }
+        }
+
+        function closeShareSheet() { document.getElementById('share-sheet').classList.remove('open'); }
+
+        function shareVia(platform) {
+            const encodedUrl = encodeURIComponent(shareCtx.url);
+            if (platform === 'copy') {
+                navigator.clipboard.writeText(shareCtx.url).then(() => alert('تم نسخ اللينك ✅'));
+                closeShareSheet();
+                return;
+            }
+            const links = {
+                whatsapp: `https://wa.me/?text=${encodedUrl}`,
+                facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+                messenger: `fb-messenger://share/?link=${encodedUrl}`
+            };
+            window.open(links[platform], '_blank');
+            closeShareSheet();
+        }
+
+        function card(t, mode) {
+            const isCap = t.user_role === 'captain';
+            const isDone = t.status === 'completed';
+            const isDeleted = t.status === 'deleted';
+            const isArchived = t.status === 'archived';
+            const passengers = t.joined_passengers || [];
+            const displayPhone = t.whatsapp_number ? t.whatsapp_number.replace(/^20/, '0') : '';
+            const fadeClass = (isDone || isDeleted || isArchived) ? 'content-fade' : '';
+
+            const routeList = (t.route_points && t.route_points.length > 0) ? t.route_points : [t.origin, t.destination];
+            const routeStr = routeList.join(' ⬅️ ');
+
+            const hasDep = t.departure_time && t.departure_time !== 'null';
+            const hasRet = t.return_time && t.return_time !== 'null';
+            let tripType = hasDep && hasRet ? '🔁 ذهاب وعودة' : hasDep ? '➡️ ذهاب فقط' : '⬅️ عودة فقط';
+
+            const isAdminMode = mode === 'admin';
+            const isLinked = isAdminMode || !!getLocalToken(t.id);
+            let manageUI;
+            if (mode === 'my' && !isLinked) {
+                manageUI = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 mt-2 text-center"><p class="text-[10px] font-black text-amber-700 mb-2">🔒 مش مربوطة بالجهاز ده.</p><button onclick="linkTripWithCode('${t.id}')" class="bg-amber-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">🔑 أدخل كود الإدارة</button></div>`;
+            } else if(isArchived || isDeleted) {
+                manageUI = `<div class="grid grid-cols-2 gap-2 mt-2"><button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">♻️ استرجاع</button><button onclick="tripAction('${t.id}', 'delperm', '${mode}')" class="bg-red-600 text-white p-2 rounded-xl text-[9px] font-black">🗑️ حذف نهائي</button></div>`;
+            } else {
+                manageUI = `<div class="grid grid-cols-3 gap-2 mt-2">${isDone ? `<button onclick="tripAction('${t.id}', 'active', '${mode}')" class="bg-green-600 text-white p-2 rounded-xl text-[9px] font-black">🔄 تنشيط</button>` : `<button onclick="tripAction('${t.id}', 'done', '${mode}')" class="bg-black text-white p-2 rounded-xl text-[9px] font-black">✅ اكتمال</button>`}<button onclick="openEdit('${t.id}', '${mode}')" class="bg-blue-600 text-white p-2 rounded-xl text-[9px] font-black">📝 تعديل</button><button onclick="tripAction('${t.id}', 'del', '${mode}')" class="bg-red-50 text-red-600 p-2 rounded-xl text-[9px] font-black">❌ حذف</button></div>`;
+            }
+
+            const localPhone = getJoinedTrips()[t.id];
+            const alreadyJoined = !!localPhone && passengers.includes(localPhone);
+
+            let btnUI;
+            if (mode === 'public') {
+                const inquiryMsg = 'سلام عليكم، شوفت رحلتك عبر Sharride وعاوز أستفسر.';
+                if (isCap) {
+                    const inquiryLink = `<button onclick='openWhatsApp(${JSON.stringify(t.id)}, ${JSON.stringify(inquiryMsg)})' class="btn-outline flex-1">استفسار 💬</button>`;
+                    const actionBtn = alreadyJoined ? `<button onclick="leaveTrip('${t.id}')" class="btn-outline border-red-500 text-red-500 flex-1">إلغاء الحجز</button>` : `<button onclick='joinAction(${JSON.stringify(t.id)}, ${JSON.stringify(t.origin)}, ${JSON.stringify(t.destination)}, "captain")' class="btn-green flex-1 text-xs italic font-black">🤝 حجز مقعد</button>`;
+                    btnUI = `<div class="flex gap-2">${inquiryLink}${actionBtn}</div>`;
+                } else {
+                    const offerLink = `<button onclick='openWhatsApp(${JSON.stringify(t.id)}, ${JSON.stringify(inquiryMsg)})' class="btn-blue flex-1 py-4 text-xs font-black italic shadow-md">كلمني 💬</button>`;
+                    const actionBtn = alreadyJoined ? `<button onclick="leaveTrip('${t.id}')" class="btn-outline border-red-500 text-red-500 flex-1">إلغاء الانضمام</button>` : `<button onclick='joinAction(${JSON.stringify(t.id)}, ${JSON.stringify(t.origin)}, ${JSON.stringify(t.destination)}, "passenger")' class="btn-outline flex-1 text-xs">انضم للمجموعة 🤝</button>`;
+                    btnUI = `<div class="flex gap-2 mt-1">${offerLink}${actionBtn}</div>`;
+                }
+            } else {
+                btnUI = manageUI;
+            }
+
+            const matchTagHtml = t.matchTag ? `<span class="match-badge">${t.matchTag}</span>` : '';
+
+            return `<div class="trip-card"><div class="${fadeClass}"><div class="card-header"><div class="main-info"><div class="flex items-center gap-2 mb-1">${matchTagHtml}<span class="role-badge ${isCap ? 'bg-blue-500' : 'bg-orange-500'}">${isCap?'كابتن':'راكب'}</span></div><h3 class="font-black text-[14px] text-slate-800 mb-1 leading-snug">${escapeHtml(routeStr)}</h3><div class="flex gap-3 items-center text-[10px] text-gray-500 font-bold mb-2 italic">${hasDep?`<div>🕒 ذهاب: ${t.departure_time}</div>`:''} ${hasRet?`<div>🕒 عودة: ${t.return_time}</div>`:''}</div><div class="flex gap-2 mb-2">${isCap ? `<span class="feature-badge">💺 مقاعد: ${passengers.length}/${t.seats_available}</span><span class="feature-badge">${t.has_ac ? '❄️ مكيفة' : '❌ بدون'}</span>` : `<span class="feature-badge bg-orange-50 text-orange-700 font-black">👥 منضمين: ${passengers.length + 1}</span>`}</div></div><div class="side-info"><button onclick='shareTrip("", ${JSON.stringify(t.id)})' class="share-btn" aria-label="مشاركة"><svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M14 8V4l8 7-8 7v-4.05c-5.05.28-8.02 2-10 5.05.4-6.5 3.7-11.3 10-12z"/></svg></button>${isCap ? `<span class="price-text">${escapeHtml(t.price_per_seat) || 'اتفاق'}</span>` : ''}</div></div>${t.notes ? `<p class="text-[10px] bg-gray-50 p-3 rounded-2xl italic text-gray-600 font-medium border-r-4 border-gray-200 text-right">" ${escapeHtml(t.notes)} "</p>` : ''}</div><div>${btnUI}</div></div>`;
+        }
+
+        async function openSingleTripModal(tripId) {
+            closeNotifications();
+            const modal = document.getElementById('single-trip-modal');
+            const content = document.getElementById('single-trip-content');
+            modal.classList.remove('hidden');
+            openModalTripId = tripId;
+            openModalTripMode = 'public';
+            content.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل الرحلة...</p>';
+
+            const { data, error } = await sb.from('public_trips').select(PUBLIC_TRIP_COLS).eq('id', tripId).maybeSingle();
+            if (error || !data) {
+                content.innerHTML = `<div class="no-results-card"><h3 class="text-slate-700 font-black text-lg">الرحلة غير متاحة حالياً</h3></div>`;
+                return;
+            }
+            tripsPublic = tripsPublic.filter(t => t.id !== data.id).concat([data]);
+            content.innerHTML = card(data, 'public');
+        }
+
+        async function openOwnTripModal(tripId) {
+            closeNotifications();
+            const modal = document.getElementById('single-trip-modal');
+            const content = document.getElementById('single-trip-content');
+            modal.classList.remove('hidden');
+            openModalTripId = tripId;
+            openModalTripMode = 'my';
+            content.innerHTML = '<p class="text-center py-16 text-gray-400 font-black italic">جاري تحميل الرحلة...</p>';
+
+            const token = getLocalToken(tripId);
+            if (!token) {
+                content.innerHTML = `<div class="no-results-card"><h3 class="text-slate-700 font-black text-lg">الرحلة مش مربوطة بجهازك</h3></div>`;
+                return;
+            }
+            const { data, error } = await sb.rpc('get_my_trips_by_tokens', { p_tokens: [token] });
+            const trip = (data || []).find(t => t.id === tripId);
+            if (error || !trip) {
+                content.innerHTML = `<div class="no-results-card"><h3 class="text-slate-700 font-black text-lg">الرحلة غير متاحة</h3></div>`;
+                return;
+            }
+            tripsMine = tripsMine.filter(t => t.id !== trip.id).concat([trip]);
+            content.innerHTML = card(trip, 'my');
+        }
+
+        function refreshOpenTripModal(tripId) {
+            const modal = document.getElementById('single-trip-modal');
+            if (!modal || modal.classList.contains('hidden')) return;
+            if (openModalTripId !== tripId) return;
+            if (openModalTripMode === 'my') openOwnTripModal(tripId);
+            else openSingleTripModal(tripId);
+        }
+
+        function closeSingleTripModal() {
+            document.getElementById('single-trip-modal').classList.add('hidden');
+            openModalTripId = null;
+            openModalTripMode = null;
+        }
+
+        async function apiAdminLogin() {
+            const email = document.getElementById('admin-email').value.trim();
+            const pass = document.getElementById('admin-pass').value;
+            const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+            if (error) return alert('بيانات الدخول غير صحيحة ❌');
+            document.getElementById('admin-auth').style.display = 'none';
+            document.getElementById('admin-panel').classList.remove('hidden');
+            loadAdminStats();
+            apiAdminReload();
+        }
+
+        async function adminLogout() {
+            await sb.auth.signOut();
+            location.hash = '';
+            location.reload();
+        }
+
+        async function loadAdminStats() {
+            const { data: stats } = await sb.from('site_stats').select('visit_count').eq('id', 1).single();
+            document.getElementById('visit-total').innerText = stats?.visit_count || 0;
+            const { count: capsCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'captain');
+            const { count: passCount } = await sb.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('user_role', 'passenger');
+            document.getElementById('count-cap').innerText = capsCount || 0;
+            document.getElementById('count-pas').innerText = passCount || 0;
+        }
+
+        async function apiAdminReload() {
+            const phone = document.getElementById('admin-search-phone').value.trim();
+            const origin = document.getElementById('admin-search-origin').value;
+            const status = document.getElementById('admin-search-status').value;
+            const dateFrom = document.getElementById('admin-search-date-from').value;
+            const dateTo = document.getElementById('admin-search-date-to').value;
+
+            let q = sb.from('trips').select('*');
+            if(phone) q = q.ilike('whatsapp_number', `%${phone.replace(/^0/, '')}%`);
+            if(origin) q = q.eq('origin', origin);
+            if(status) q = q.eq('status', status);
+            if(dateFrom) q = q.gte('created_at', `${dateFrom}T00:00:00`);
+            if(dateTo) q = q.lte('created_at', `${dateTo}T23:59:59`);
+
+            const {data} = await q;
+            if(data) {
+                tripsAdmin = data;
+                document.getElementById('list-admin').innerHTML = data.length > 0 ? data.map(t => card(t, 'admin')).join('') : `<p class="text-center py-16 text-gray-400 font-black italic">مفيش نتائج</p>`;
+            }
+        }
+
+        function adminClearFilters() {
+            document.getElementById('admin-search-phone').value = '';
+            document.getElementById('admin-search-origin').value = '';
+            document.getElementById('admin-search-status').value = '';
+            document.getElementById('admin-search-date-from').value = '';
+            document.getElementById('admin-search-date-to').value = '';
+            apiAdminReload();
+        }
+
+        function toggleSelectAll(el) {
+            document.querySelectorAll('.admin-select-cb').forEach(cb => cb.checked = el.checked);
+            updateBulkBar();
+        }
+
+        function getSelectedTripIds() {
+            return Array.from(document.querySelectorAll('.admin-select-cb:checked')).map(cb => cb.value);
+        }
+
+        function updateBulkBar() {
+            const count = getSelectedTripIds().length;
+            const bar = document.getElementById('bulk-actions-bar');
+            if(bar) bar.style.display = count > 0 ? 'flex' : 'none';
+        }
+
+        async function bulkAction(act) {
+            const ids = getSelectedTripIds();
+            if(ids.length === 0) return;
+            if(!confirm(`تأكيد الإجراء الجماعي؟`)) return;
+
+            if(act === 'delperm') await sb.from('trips').delete().in('id', ids);
+            else if(act === 'done') await sb.from('trips').update({status: 'completed'}).in('id', ids);
+            else if(act === 'active') await sb.from('trips').update({status: 'active'}).in('id', ids);
+
+            apiAdminReload();
+            apiGetTrips();
+        }
+
+        // FOFi Logic
+        const SUPPORT_WA_NUMBER = '201101002429';
+        const FOFI_KB = {
+            post: {
+                title: 'نشر مشوار جديد 📝',
+                body: 'اختر دورك، حدد خط سيرك ومواعيدك وسجل المشوار بسهولة.',
+                chips: [ { label: '📲 سجّل مشوارك دلوقتي', action: "closeFofi(); uiTab('post');" } ]
+            },
+            search: {
+                title: 'البحث عن رحلة 🔎',
+                body: 'اختر نقطة انطلاقك ووجهتك وستظهر لك الرحلات المارة بنفس خط السير.',
+                chips: [ { label: '🔎 استكشف الرحلات', action: "closeFofi(); uiTab('search');" } ]
+            }
+        };
+
+        function fofiAddBot(html) {
+            const body = document.getElementById('fofi-body');
+            const div = document.createElement('div');
+            div.className = 'fofi-bubble-bot'; div.innerHTML = html;
+            body.appendChild(div); body.scrollTop = body.scrollHeight;
+        }
+
+        function fofiAddChips(chips) {
+            if (!chips || chips.length === 0) return;
+            const body = document.getElementById('fofi-body');
+            const row = document.createElement('div');
+            row.className = 'fofi-chip-row';
+            chips.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'fofi-chip ' + (c.cls || '');
+                btn.textContent = c.label;
+                btn.setAttribute('onclick', c.action);
+                row.appendChild(btn);
+            });
+            body.appendChild(row); body.scrollTop = body.scrollHeight;
+        }
+
+        function openFofi(topic) {
+            const panel = document.getElementById('fofi-panel');
+            panel.classList.add('open');
+            document.getElementById('fofi-body').innerHTML = '';
+            fofiAddBot('أهلًا بيك! 👋 أنا <b>FOFi</b>، مساعدك في Sharride.');
+            fofiAddChips([
+                { label: '📝 نشر مشوار', action: "fofiGo('post')" },
+                { label: '🔎 البحث عن رحلة', action: "fofiGo('search')" }
+            ]);
+        }
+
+        function closeFofi() { document.getElementById('fofi-panel').classList.remove('open'); }
+
+        function fofiGo(topicKey) {
+            const t = FOFI_KB[topicKey];
+            if (!t) return;
+            fofiAddBot(`<b>${t.title}</b><br><br>${t.body}`);
+            fofiAddChips(t.chips || []);
+        }
+
+        function fillDropdowns() {
+            const dropdowns = ['in-o', 'in-d', 'f-o', 'f-d', 'edit-o', 'edit-d', 'admin-search-origin'];
+            dropdowns.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.innerHTML = `<option value="">${id.includes('f-') || id.includes('admin') ? 'كل المناطق' : 'اختر منطقة'}</option>`;
+                    LOCS.forEach(l => { el.innerHTML += `<option value="${l}">${l}</option>`; });
+                }
+            });
+
+            const hDropdowns = ['in-h1', 'in-h2', 'edit-h1', 'edit-h2'];
+            const mDropdowns = ['in-m1', 'in-m2', 'edit-m1', 'edit-m2'];
+            const hoursHtml = Array.from({length:12}, (_,i)=>(i+1).toString().padStart(2,'0')).map(h=>`<option value="${h}">${h}</option>`).join('');
+            const mHtml = ['00','15','30','45'].map(m=>`<option value="${m}">${m}</option>`).join('');
+            hDropdowns.forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = `<option value="">ساعة</option>` + hoursHtml; });
+            mDropdowns.forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = mHtml; });
+        }
+    </script>
+</body>
+</html>
