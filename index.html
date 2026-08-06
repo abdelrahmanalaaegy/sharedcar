@@ -94,18 +94,33 @@
 
         window.uiTab = function(id) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('view-' + id).classList.add('active');
-            if(id === 'search') apiGetTrips();
-            if(id === 'my') { apiGetMyTrips(); renderMyPhoneCard(); }
+            const target = document.getElementById('view-' + id);
+            if (target) target.classList.add('active');
+            if (id === 'search') apiGetTrips();
+            if (id === 'my') { apiGetMyTrips(); renderMyPhoneCard(); }
+        };
+
+        const hideOverlay = () => {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.style.display = 'none';
         };
 
         window.onload = async function() {
-            setTimeout(() => { document.getElementById('loading-overlay').style.display = 'none'; }, 1000);
-            fillDropdowns();
-            renderHomePhoneCard();
-            await checkAdminSession();
-            apiGetTrips();
+            try {
+                fillDropdowns();
+                renderHomePhoneCard();
+                await checkAdminSession();
+                apiGetTrips();
+            } catch (err) {
+                console.error("خطأ في التحميل:", err);
+            } finally {
+                // إخفاء الشاشة دائماً مهما حدث
+                hideOverlay();
+            }
         };
+
+        // أمان إضافي: إخفاء الشاشة بعد ثانية كحد أقصى إذا علق أي شيء
+        setTimeout(hideOverlay, 1000);
     </script>
 </body>
 </html>
