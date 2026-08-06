@@ -15,19 +15,16 @@
         <p class="text-slate-500 text-xs font-bold mb-8">شارك رحلتك بسهولة وأمان</p>
 
         <div class="space-y-3">
-            <button onclick="window.loginWithOAuth('google')" class="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 text-slate-700 font-bold py-3.5 px-4 rounded-2xl hover:bg-slate-50 transition shadow-sm">
+            <button onclick="loginWithOAuth('google')" class="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 text-slate-700 font-bold py-3.5 px-4 rounded-2xl hover:bg-slate-50 transition shadow-sm">
                 <span>متابعة باستخدام Google</span>
             </button>
-            <button onclick="window.loginWithOAuth('facebook')" class="w-full flex items-center justify-center gap-3 bg-[#1877F2] text-white font-bold py-3.5 px-4 rounded-2xl hover:bg-[#166fe5] transition shadow-md">
+            <button onclick="loginWithOAuth('facebook')" class="w-full flex items-center justify-center gap-3 bg-[#1877F2] text-white font-bold py-3.5 px-4 rounded-2xl hover:bg-[#166fe5] transition shadow-md">
                 <span>متابعة باستخدام Facebook</span>
             </button>
         </div>
     </div>
 
-    <script type="module">
-        import { loginWithOAuth, setRole } from './js/auth.js';
-        window.loginWithOAuth = loginWithOAuth;
-        window.setRole = setRole;
-    </script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
 </body>
 </html>
