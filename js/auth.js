@@ -1,14 +1,14 @@
-import { sb } from './supabase.js';
-
-export function getMyPhone() {
+function getMyPhone() {
     try { return localStorage.getItem('sr_my_phone') || ''; } catch (e) { return ''; }
 }
+window.getMyPhone = getMyPhone;
 
-export function saveMyPhone(phone) {
+function saveMyPhone(phone) {
     try { localStorage.setItem('sr_my_phone', phone); } catch (e) {}
 }
+window.saveMyPhone = saveMyPhone;
 
-export function promptJoinPhone() {
+function promptJoinPhone() {
     const saved = getMyPhone();
     if (saved) return saved;
     const raw = prompt("أدخل رقم تليفونك (01xxxxxxxxx) — هيتحفظ على الجهاز ده وميتسألش عنه تاني إلا لو غيّرته بنفسك:");
@@ -18,8 +18,9 @@ export function promptJoinPhone() {
     saveMyPhone(p);
     return p;
 }
+window.promptJoinPhone = promptJoinPhone;
 
-export function changeMyPhone() {
+function changeMyPhone() {
     const current = getMyPhone();
     const raw = prompt(current ? `رقمك الحالي المحفوظ: ${current}\nاكتب رقمك الجديد (01xxxxxxxxx):` : "اكتب رقمك (01xxxxxxxxx):");
     if (!raw) return;
@@ -30,17 +31,19 @@ export function changeMyPhone() {
     renderMyPhoneCard();
     renderHomePhoneCard();
 }
+window.changeMyPhone = changeMyPhone;
 
-export function renderMyPhoneCard() {
+function renderMyPhoneCard() {
     const el = document.getElementById('my-phone-card');
     if (!el) return;
     const phone = getMyPhone();
     el.innerHTML = phone
-        ? `<div class="flex items-center justify-between gap-2 bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-blue-700 text-right">📱 رقم تسجيلك المحفوظ: ${phone}</p><button onclick="window.changeMyPhone()" class="bg-blue-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button></div>`
-        : `<div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-amber-700 text-right">📱 لسه مفيش رقم تسجيل محفوظ على الجهاز ده</p><button onclick="window.changeMyPhone()" class="bg-amber-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">إضافة رقمي</button></div>`;
+        ? `<div class="flex items-center justify-between gap-2 bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-blue-700 text-right">📱 رقم تسجيلك المحفوظ: ${escapeHtml(phone)}</p><button onclick="changeMyPhone()" class="bg-blue-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">تغيير</button></div>`
+        : `<div class="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4"><p class="text-[11px] font-black text-amber-700 text-right">📱 لسه مفيش رقم تسجيل محفوظ على الجهاز ده</p><button onclick="changeMyPhone()" class="bg-amber-600 text-white text-[10px] font-black px-3 py-2 rounded-xl shrink-0">إضافة رقمي</button></div>`;
 }
+window.renderMyPhoneCard = renderMyPhoneCard;
 
-export function renderHomePhoneCard() {
+function renderHomePhoneCard() {
     const el = document.getElementById('home-phone-card');
     if (!el) return;
     const phone = getMyPhone();
@@ -55,59 +58,65 @@ export function renderHomePhoneCard() {
         <p class="text-[11px] text-slate-500 font-bold leading-relaxed mb-4 text-center">إجهَز لمشوارك الجاي؟ وضيف رقمك 👋</p>
         <div class="flex gap-2">
             <input type="tel" id="home-phone-input" placeholder="01xxxxxxxxx" class="form-input text-center font-black flex-1 min-w-0">
-            <button onclick="window.saveHomePhone()" class="bg-[#00a884] text-white font-black rounded-2xl px-6 py-[15px] text-sm shadow-md shrink-0" style="width:auto;">حفظ</button>
+            <button onclick="saveHomePhone()" class="bg-[#00a884] text-white font-black rounded-2xl px-6 py-[15px] text-sm shadow-md shrink-0" style="width:auto;">حفظ</button>
         </div>`;
 }
+window.renderHomePhoneCard = renderHomePhoneCard;
 
-export async function saveHomePhone() {
+async function saveHomePhone() {
     const input = document.getElementById('home-phone-input');
     const raw = input.value.trim().replace(/[\s\-]/g, '');
     if (!/^01[0125]\d{8}$/.test(raw)) return alert("رقم غير صحيح، لازم يكون 11 رقم ويبدأ بـ 01 (مثال: 01012345678)");
     saveMyPhone(raw);
     renderHomePhoneCard();
-    try { await sb.from('leads').insert([{ phone: raw, source: 'home_banner' }]); } catch (e) { console.error(e); }
+    try { await window.sb.from('leads').insert([{ phone: raw, source: 'home_banner' }]); } catch (e) { console.error(e); }
 }
+window.saveHomePhone = saveHomePhone;
 
-// OAuth وتسجيل خروج الكباتن والركاب
-export async function loginWithOAuth(provider) {
-    const { error } = await sb.auth.signInWithOAuth({
+async function loginWithOAuth(provider) {
+    const { error } = await window.sb.auth.signInWithOAuth({
         provider: provider,
         options: { redirectTo: window.location.origin + '/login.html' }
     });
     if (error) alert("فشل الدخول: " + error.message);
 }
+window.loginWithOAuth = loginWithOAuth;
 
-export async function setRole(selectedRole) {
-    const { error } = await sb.auth.updateUser({ data: { role: selectedRole } });
+async function setRole(selectedRole) {
+    const { error } = await window.sb.auth.updateUser({ data: { role: selectedRole } });
     if (error) return alert("حدث خطأ: " + error.message);
-    window.location.href = selectedRole === 'captain' ? 'index.html' : 'index.html';
+    window.location.href = 'index.html';
 }
+window.setRole = setRole;
 
-export async function checkAdminSession() {
-    const { data: { session } } = await sb.auth.getSession();
+async function checkAdminSession() {
+    const { data: { session } } = await window.sb.auth.getSession();
     const navAdmin = document.getElementById('nav-admin');
     if (session || location.hash === '#owner-access') navAdmin.style.display = '';
     if (session) {
         document.getElementById('admin-auth').style.display = 'none';
         document.getElementById('admin-panel').classList.remove('hidden');
-        if (window.loadAdminStats) window.loadAdminStats();
-        if (window.apiAdminReload) window.apiAdminReload();
+        loadAdminStats();
+        apiAdminReload();
     }
 }
+window.checkAdminSession = checkAdminSession;
 
-export async function apiAdminLogin() {
+async function apiAdminLogin() {
     const email = document.getElementById('admin-email').value.trim();
     const pass = document.getElementById('admin-pass').value;
-    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-    if (error) return alert('بيانات الدخول غير صحيحة ❌');
+    const { error } = await window.sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { alert('بيانات الدخول غير صحيحة ❌'); return; }
     document.getElementById('admin-auth').style.display = 'none';
     document.getElementById('admin-panel').classList.remove('hidden');
-    if (window.loadAdminStats) window.loadAdminStats();
-    if (window.apiAdminReload) window.apiAdminReload();
+    loadAdminStats();
+    apiAdminReload();
 }
+window.apiAdminLogin = apiAdminLogin;
 
-export async function adminLogout() {
-    await sb.auth.signOut();
+async function adminLogout() {
+    await window.sb.auth.signOut();
     location.hash = '';
     location.reload();
 }
+window.adminLogout = adminLogout;
